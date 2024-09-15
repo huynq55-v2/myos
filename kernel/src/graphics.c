@@ -3,13 +3,31 @@
 #include <limine.h>  // Nếu cần sử dụng `struct limine_framebuffer`
 #include <klibc.h>
 
-void put_pixel(graphics_context_t *ctx, int x, int y, uint32_t color) {
-    if (x >= 0 && x < ctx->width && y >= 0 && y < ctx->height) {
-        ctx->framebuffer[y * (ctx->pitch / 4) + x] = color;
+static graphics_context_t g_ctx;
+
+// Hàm khởi tạo graphics context
+void init_graphics(struct limine_framebuffer *fb) {
+    g_ctx.framebuffer = (uint32_t *)fb->address;
+    g_ctx.pitch = fb->pitch;
+    g_ctx.width = fb->width;
+    g_ctx.height = fb->height;
+    g_ctx.text_color = 0xFFFFFFFF;       // Màu chữ trắng
+    g_ctx.background_color = 0x00000000; // Màu nền đen
+    g_ctx.cursor_x = 0;
+    g_ctx.cursor_y = 0;
+    g_ctx.prev_cursor_x = 0;
+    g_ctx.prev_cursor_y = 0;
+    g_ctx.line_height = FONT_LINE_HEIGHT;
+    g_ctx.max_rows = g_ctx.height / g_ctx.line_height;
+}
+
+void put_pixel(int x, int y, uint32_t color) {
+    if (x >= 0 && x < g_ctx.width && y >= 0 && y < g_ctx.height) {
+        g_ctx.framebuffer[y * (g_ctx.pitch / 4) + x] = color;
     }
 }
 
-void draw_glyph(graphics_context_t *ctx, int x, int y, char c) {
+void draw_glyph(int x, int y, char c) {
     if (c < 32 || c > 126) {
         c = '?';
     }
@@ -26,62 +44,62 @@ void draw_glyph(graphics_context_t *ctx, int x, int y, char c) {
             if (pixel > 128) {
                 int px = glyph_x + col;
                 int py = glyph_y + row;
-                put_pixel(ctx, px, py, ctx->text_color);
+                put_pixel(px, py, g_ctx.text_color);
             }
         }
     }
 }
 
-void draw_text(graphics_context_t *ctx, int x, int y, const char *text) {
-    ctx->cursor_x = x;
-    ctx->cursor_y = y;
+void draw_text(int x, int y, const char *text) {
+    g_ctx.cursor_x = x;
+    g_ctx.cursor_y = y;
 
     while (*text) {
         if (*text == '\n') {
-            ctx->cursor_x = x;
-            ctx->cursor_y += ctx->line_height;
+            g_ctx.cursor_x = x;
+            g_ctx.cursor_y += g_ctx.line_height;
         } else {
-            draw_glyph(ctx, ctx->cursor_x, ctx->cursor_y, *text);
+            draw_glyph(g_ctx.cursor_x, g_ctx.cursor_y, *text);
             const glyph_t *glyph = &roboto_glyphs[*text - 32];
-            ctx->cursor_x += glyph->x_advance;
+            g_ctx.cursor_x += glyph->x_advance;
         }
         text++;
     }
 }
 
-void print_text(graphics_context_t *ctx, const char *text) {
+void print_text(const char *text) {
     // Xóa dấu nháy con trỏ cũ
-    erase_cursor(ctx);
+    erase_cursor(g_ctx);
 
     while (*text) {
         if (*text == '\n') {
             // Di chuyển con trỏ đến đầu dòng mới
-            ctx->cursor_x = 0;
-            ctx->cursor_y += ctx->line_height;
+            g_ctx.cursor_x = 0;
+            g_ctx.cursor_y += g_ctx.line_height;
 
             // Kiểm tra nếu cần cuộn màn hình
-            if (ctx->cursor_y + ctx->line_height > ctx->height) {
-                scroll_screen(ctx);
-                ctx->cursor_y -= ctx->line_height;
+            if (g_ctx.cursor_y + g_ctx.line_height > g_ctx.height) {
+                scroll_screen();
+                g_ctx.cursor_y -= g_ctx.line_height;
             }
         } else {
             // Vẽ ký tự
-            draw_glyph(ctx, ctx->cursor_x, ctx->cursor_y, *text);
+            draw_glyph(g_ctx.cursor_x, g_ctx.cursor_y, *text);
 
             // Lấy glyph để biết x_advance
             const glyph_t *glyph = &roboto_glyphs[*text - 32];
-            ctx->cursor_x += glyph->x_advance;
+            g_ctx.cursor_x += glyph->x_advance;
 
             // Kiểm tra nếu con trỏ vượt quá chiều rộng màn hình
-            if (ctx->cursor_x + glyph->width > ctx->width) {
+            if (g_ctx.cursor_x + glyph->width > g_ctx.width) {
                 // Di chuyển con trỏ đến đầu dòng mới
-                ctx->cursor_x = 0;
-                ctx->cursor_y += ctx->line_height;
+                g_ctx.cursor_x = 0;
+                g_ctx.cursor_y += g_ctx.line_height;
 
                 // Kiểm tra nếu cần cuộn màn hình
-                if (ctx->cursor_y + ctx->line_height > ctx->height) {
-                    scroll_screen(ctx);
-                    ctx->cursor_y -= ctx->line_height;
+                if (g_ctx.cursor_y + g_ctx.line_height > g_ctx.height) {
+                    scroll_screen();
+                    g_ctx.cursor_y -= g_ctx.line_height;
                 }
             }
         }
@@ -89,63 +107,66 @@ void print_text(graphics_context_t *ctx, const char *text) {
     }
 
     // Vẽ dấu nháy con trỏ mới
-    draw_cursor(ctx);
+    draw_cursor();
 }
 
-void scroll_screen(graphics_context_t *ctx) {
+void scroll_screen() {
     // Tính số byte mỗi dòng
-    size_t row_size = ctx->pitch * ctx->line_height;
+    size_t row_size = g_ctx.pitch * g_ctx.line_height;
 
     // Tính số byte cần di chuyển (từ dòng thứ hai đến dòng cuối)
-    size_t move_size = ctx->pitch * (ctx->height - ctx->line_height);
+    size_t move_size = g_ctx.pitch * (g_ctx.height - g_ctx.line_height);
 
     // Di chuyển vùng nhớ lên trên một dòng
     memmove(
-        ctx->framebuffer,
-        (uint8_t *)ctx->framebuffer + row_size,
+        g_ctx.framebuffer,
+        (uint8_t *)g_ctx.framebuffer + row_size,
         move_size
     );
 
     // Xóa dòng cuối cùng
-    size_t last_row_offset = ctx->pitch * (ctx->height - ctx->line_height) / 4;
-    for (size_t y = 0; y < ctx->line_height; y++) {
-        for (size_t x = 0; x < ctx->width; x++) {
-            ctx->framebuffer[last_row_offset + y * (ctx->pitch / 4) + x] = ctx->background_color;
+    size_t last_row_offset = g_ctx.pitch * (g_ctx.height - g_ctx.line_height) / 4;
+    for (size_t y = 0; y < g_ctx.line_height; y++) {
+        for (size_t x = 0; x < g_ctx.width; x++) {
+            g_ctx.framebuffer[last_row_offset + y * (g_ctx.pitch / 4) + x] = g_ctx.background_color;
         }
     }
 }
 
-void erase_cursor(graphics_context_t *ctx) {
+void erase_cursor() {
     int cursor_width = 2;
-    int cursor_height = ctx->line_height;
+    int cursor_height = g_ctx.line_height;
 
     for (int y = 0; y < cursor_height; y++) {
         for (int x = 0; x < cursor_width; x++) {
-            int px = ctx->prev_cursor_x + x;
-            int py = ctx->prev_cursor_y + y;
-            if (px >= 0 && px < ctx->width && py >= 0 && py < ctx->height) {
-                ctx->framebuffer[py * (ctx->pitch / 4) + px] = ctx->background_color;
+            int px = g_ctx.prev_cursor_x + x;
+            int py = g_ctx.prev_cursor_y + y;
+            if (px >= 0 && px < g_ctx.width && py >= 0 && py < g_ctx.height) {
+                g_ctx.framebuffer[py * (g_ctx.pitch / 4) + px] = g_ctx.background_color;
             }
         }
     }
 }
 
-void draw_cursor(graphics_context_t *ctx) {
+void draw_cursor() {
     int cursor_width = 2;
-    int cursor_height = ctx->line_height;
+    int cursor_height = g_ctx.line_height;
 
     // Cập nhật vị trí con trỏ cũ trước khi vẽ dấu nháy mới
-    ctx->prev_cursor_x = ctx->cursor_x;
-    ctx->prev_cursor_y = ctx->cursor_y;
+    g_ctx.prev_cursor_x = g_ctx.cursor_x;
+    g_ctx.prev_cursor_y = g_ctx.cursor_y;
 
     for (int y = 0; y < cursor_height; y++) {
         for (int x = 0; x < cursor_width; x++) {
-            int px = ctx->cursor_x + x;
-            int py = ctx->cursor_y + y;
-            if (px >= 0 && px < ctx->width && py >= 0 && py < ctx->height) {
-                ctx->framebuffer[py * (ctx->pitch / 4) + px] = ctx->text_color;
+            int px = g_ctx.cursor_x + x;
+            int py = g_ctx.cursor_y + y;
+            if (px >= 0 && px < g_ctx.width && py >= 0 && py < g_ctx.height) {
+                g_ctx.framebuffer[py * (g_ctx.pitch / 4) + px] = g_ctx.text_color;
             }
         }
     }
 }
 
+void print(const char *text) {
+    print_text(text);
+}

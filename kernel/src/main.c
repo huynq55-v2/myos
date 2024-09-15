@@ -63,27 +63,9 @@ void kmain(void) {
     // Fetch the first framebuffer.
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
 
-    // Khởi tạo ngữ cảnh đồ họa
-    graphics_context_t ctx;
-    ctx.framebuffer = (uint32_t *)fb->address;
-    ctx.pitch = fb->pitch;
-    ctx.width = fb->width;
-    ctx.height = fb->height;
-    ctx.text_color = 0xFFFFFFFF;       // Màu chữ trắng
-    ctx.background_color = 0x00000000; // Màu nền đen
-    ctx.cursor_x = 0;
-    ctx.cursor_y = 0;
-    ctx.line_height = FONT_LINE_HEIGHT;
-    ctx.max_rows = ctx.height / ctx.line_height;
-
-    // Xóa màn hình
-    for (size_t y = 0; y < ctx.height; y++) {
-        for (size_t x = 0; x < ctx.width; x++) {
-            put_pixel(&ctx, x, y, ctx.background_color);
-        }
-    }
-
-    print_text(&ctx, "Hello, World!\n");
+    // Khởi tạo graphics context
+    init_graphics(fb);
+    print("Hello, World!\n");
 
     // We're done, just hang...
     hcf();

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <limine.h>
 
 // Định nghĩa cấu trúc ngữ cảnh đồ họa
 typedef struct {
@@ -22,12 +23,14 @@ typedef struct {
 } graphics_context_t;
 
 // Khai báo các hàm đồ họa
-void put_pixel(graphics_context_t *ctx, int x, int y, uint32_t color);
-void draw_glyph(graphics_context_t *ctx, int x, int y, char c);
-void draw_text(graphics_context_t *ctx, int x, int y, const char *text);
-void print_text(graphics_context_t *ctx, const char *text);
-void scroll_screen(graphics_context_t *ctx);
-void draw_cursor(graphics_context_t *ctx);
-void erase_cursor(graphics_context_t *ctx);
+void init_graphics(struct limine_framebuffer *fb);
+void put_pixel(int x, int y, uint32_t color);
+void draw_glyph(int x, int y, char c);
+void draw_text(int x, int y, const char *text);
+void print_text(const char *text);
+void scroll_screen();
+void draw_cursor();
+void erase_cursor();
+void print(const char *text);
 
 #endif // GRAPHICS_H
