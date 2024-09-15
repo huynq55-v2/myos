@@ -170,3 +170,83 @@ void draw_cursor() {
 void print(const char *text) {
     print_text(text);
 }
+
+// Hàm chuyển đổi số nguyên thành chuỗi
+void itoa(int value, char *str, int base) {
+    char *digits = "0123456789ABCDEF";
+    char *ptr = str;
+    char *ptr1 = str;
+    char tmp_char;
+    int tmp_value;
+
+    // Xử lý số âm trong hệ thập phân (base 10)
+    if (value < 0 && base == 10) {
+        *ptr++ = '-';
+        value = -value;
+    }
+
+    // Chuyển đổi số thành chuỗi
+    do {
+        tmp_value = value;
+        value /= base;
+        *ptr++ = digits[tmp_value % base];
+    } while (value);
+
+    // Thêm ký tự kết thúc chuỗi
+    *ptr-- = '\0';
+
+    // Đảo ngược chuỗi
+    while (ptr1 < ptr) {
+        tmp_char = *ptr;
+        *ptr-- = *ptr1;
+        *ptr1++ = tmp_char;
+    }
+}
+
+#include <stdarg.h>
+
+void kprintf(const char *format, ...) {
+    char buffer[32];  // Bộ đệm tạm thời để lưu giá trị số
+    const char *ptr;
+    va_list args;
+    va_start(args, format);
+
+    // Duyệt qua từng ký tự trong chuỗi format
+    for (ptr = format; *ptr != '\0'; ptr++) {
+        if (*ptr == '%') {
+            ptr++;
+            switch (*ptr) {
+                case 'd': {
+                    // In số nguyên thập phân
+                    int value = va_arg(args, int);
+                    itoa(value, buffer, 10);  // Chuyển đổi số thành chuỗi
+                    print_text(buffer);       // In chuỗi ra màn hình
+                    break;
+                }
+                case 'x': {
+                    // In số nguyên hệ thập lục phân
+                    int value = va_arg(args, int);
+                    itoa(value, buffer, 16);  // Chuyển đổi số thành chuỗi hệ 16
+                    print_text(buffer);       // In chuỗi ra màn hình
+                    break;
+                }
+                case 's': {
+                    // In chuỗi ký tự
+                    char *str = va_arg(args, char*);
+                    print_text(str);          // In chuỗi ra màn hình
+                    break;
+                }
+                default:
+                    // Nếu không phải định dạng hợp lệ, in trực tiếp ký tự
+                    print_text("%");
+                    print_text((char[]){*ptr, '\0'});
+                    break;
+            }
+        } else {
+            // In trực tiếp các ký tự không phải là định dạng
+            print_text((char[]){*ptr, '\0'});
+        }
+    }
+
+    va_end(args);
+}

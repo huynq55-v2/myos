@@ -32,5 +32,6 @@ void scroll_screen();
 void draw_cursor();
 void erase_cursor();
 void print(const char *text);
+void kprintf(const char *format, ...);
 
 #endif // GRAPHICS_H

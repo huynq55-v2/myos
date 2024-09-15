@@ -67,6 +67,12 @@ void kmain(void) {
     init_graphics(fb);
     print("Hello, World!\n");
 
+    // Sử dụng hàm kprintf để in ra giá trị
+    kprintf("Hello, World!\n");
+    kprintf("3 + 4 == %d\n", 7);
+    kprintf("Hex: %x\n", 255);
+    kprintf("String: %s\n", "Chuoi ky tu");
+
     // We're done, just hang...
     hcf();
 }
