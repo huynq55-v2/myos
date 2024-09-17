@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <limine.h>
+#include "limine.h"
 
 // Định nghĩa cấu trúc ngữ cảnh đồ họa
 typedef struct {

@@ -1,9 +1,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <limine.h>
-#include <graphics.h>
-#include <font.h>
+#include "limine.h"
+#include "graphics.h"
+#include "font.h"
+#include "idt.h"
+#include "gdt.h"
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -65,13 +67,23 @@ void kmain(void) {
 
     // Khởi tạo graphics context
     init_graphics(fb);
-    print("Hello, World!\n");
+    gdt_init();   // Khởi tạo GDT
+    idt_init();  // Nạp IDT
+
+    // __asm__ __volatile__("int3"); // test trigger breakpoint
 
     // Sử dụng hàm kprintf để in ra giá trị
     kprintf("Hello, World!\n");
     kprintf("3 + 4 == %d\n", 7);
     kprintf("Hex: %x\n", 255);
     kprintf("String: %s\n", "Chuoi ky tu");
+
+    // Kích hoạt ngoại lệ chia cho 0 bằng assembly
+    __asm__ __volatile__(
+        "movq $1, %rax\n\t"
+        "movq $0, %rbx\n\t"
+        "divq %rbx\n\t" // Thực hiện phép chia cho 0
+    );
 
     // We're done, just hang...
     hcf();

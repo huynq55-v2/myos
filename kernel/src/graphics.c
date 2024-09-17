@@ -1,7 +1,7 @@
 #include "graphics.h"
 #include "font.h"  // Để truy cập dữ liệu font như `roboto_glyphs`
-#include <limine.h>  // Nếu cần sử dụng `struct limine_framebuffer`
-#include <klibc.h>
+#include "limine.h"
+#include "klibc.h"
 
 static graphics_context_t g_ctx;
 
