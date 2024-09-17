@@ -63,8 +63,6 @@ void test_idt() {
     set_idt_gate(0, (uint64_t)isr0_handler, 0x08, 0x8E, 0);
     set_idt_gate(3, (uint64_t)isr3_handler, 0x08, 0x8E, 0);
     set_idt_gate(8, (uint64_t)isr8_handler, 0x08, 0x8E, 1);
-    
-    idt_init();
 
     // Kích hoạt các ngắt
     trigger_interrupt0(); // Divide by zero

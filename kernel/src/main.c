@@ -9,7 +9,7 @@
 #include "tss.h"
 
 #ifdef TEST
-#include "tests/tests.h"
+void run_all_tests();
 #endif
 
 // Set the base revision to 2, this is recommended as this is the latest
