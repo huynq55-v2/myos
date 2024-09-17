@@ -22,7 +22,7 @@ void init_graphics(struct limine_framebuffer *fb) {
 }
 
 void put_pixel(int x, int y, uint32_t color) {
-    if (x >= 0 && x < g_ctx.width && y >= 0 && y < g_ctx.height) {
+    if (x >= 0 && (size_t)x < g_ctx.width && y >= 0 && (size_t)y < g_ctx.height) {
         g_ctx.framebuffer[y * (g_ctx.pitch / 4) + x] = color;
     }
 }
@@ -78,7 +78,7 @@ void print_text(const char *text) {
             g_ctx.cursor_y += g_ctx.line_height;
 
             // Kiểm tra nếu cần cuộn màn hình
-            if (g_ctx.cursor_y + g_ctx.line_height > g_ctx.height) {
+            if ((size_t)(g_ctx.cursor_y + g_ctx.line_height) > g_ctx.height) {
                 scroll_screen();
                 g_ctx.cursor_y -= g_ctx.line_height;
             }
@@ -91,13 +91,13 @@ void print_text(const char *text) {
             g_ctx.cursor_x += glyph->x_advance;
 
             // Kiểm tra nếu con trỏ vượt quá chiều rộng màn hình
-            if (g_ctx.cursor_x + glyph->width > g_ctx.width) {
+            if ((size_t)(g_ctx.cursor_x + glyph->width) > g_ctx.width) {
                 // Di chuyển con trỏ đến đầu dòng mới
                 g_ctx.cursor_x = 0;
                 g_ctx.cursor_y += g_ctx.line_height;
 
                 // Kiểm tra nếu cần cuộn màn hình
-                if (g_ctx.cursor_y + g_ctx.line_height > g_ctx.height) {
+                if ((size_t)(g_ctx.cursor_y + g_ctx.line_height) > g_ctx.height) {
                     scroll_screen();
                     g_ctx.cursor_y -= g_ctx.line_height;
                 }
@@ -126,7 +126,7 @@ void scroll_screen() {
 
     // Xóa dòng cuối cùng
     size_t last_row_offset = g_ctx.pitch * (g_ctx.height - g_ctx.line_height) / 4;
-    for (size_t y = 0; y < g_ctx.line_height; y++) {
+    for (size_t y = 0; y < (size_t)g_ctx.line_height; y++) {
         for (size_t x = 0; x < g_ctx.width; x++) {
             g_ctx.framebuffer[last_row_offset + y * (g_ctx.pitch / 4) + x] = g_ctx.background_color;
         }
@@ -141,7 +141,7 @@ void erase_cursor() {
         for (int x = 0; x < cursor_width; x++) {
             int px = g_ctx.prev_cursor_x + x;
             int py = g_ctx.prev_cursor_y + y;
-            if (px >= 0 && px < g_ctx.width && py >= 0 && py < g_ctx.height) {
+            if (px >= 0 && (size_t)px < g_ctx.width && py >= 0 && (size_t)py < g_ctx.height) {
                 g_ctx.framebuffer[py * (g_ctx.pitch / 4) + px] = g_ctx.background_color;
             }
         }
@@ -160,7 +160,7 @@ void draw_cursor() {
         for (int x = 0; x < cursor_width; x++) {
             int px = g_ctx.cursor_x + x;
             int py = g_ctx.cursor_y + y;
-            if (px >= 0 && px < g_ctx.width && py >= 0 && py < g_ctx.height) {
+            if (px >= 0 && (size_t)px < g_ctx.width && py >= 0 && (size_t)py < g_ctx.height) {
                 g_ctx.framebuffer[py * (g_ctx.pitch / 4) + px] = g_ctx.text_color;
             }
         }
