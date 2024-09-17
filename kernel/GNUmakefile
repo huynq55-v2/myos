@@ -160,6 +160,25 @@ ifeq ($(KARCH),x86_64)
 override OBJ += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm=.asm.o))
 endif
 override HEADER_DEPS := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
+ifeq ($(KARCH),x86_64)
+override HEADER_DEPS += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm=.asm.d))
+endif
+
+# Define Test Build Variables
+TEST_OUTPUT := test
+TEST_OBJ_DIR := obj-$(KARCH)-test
+TEST_CFLAGS := $(KCFLAGS) -DTEST
+TEST_BIN := bin-$(KARCH)/$(TEST_OUTPUT)
+
+# List of Test Object Files
+override TEST_OBJ := $(addprefix $(TEST_OBJ_DIR)/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o))
+ifeq ($(KARCH),x86_64)
+override TEST_OBJ += $(addprefix $(TEST_OBJ_DIR)/,$(NASMFILES:.asm=.asm.o))
+endif
+override HEADER_DEPS_TEST := $(addprefix $(TEST_OBJ_DIR)/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
+ifeq ($(KARCH),x86_64)
+override HEADER_DEPS_TEST += $(addprefix $(TEST_OBJ_DIR)/,$(NASMFILES:.asm=.asm.d))
+endif
 
 # Default target.
 .PHONY: all
@@ -190,10 +209,46 @@ obj-$(KARCH)/%.asm.o: src/%.asm GNUmakefile
 	nasm $(KNASMFLAGS) $< -o $@
 endif
 
-# Remove object files and the final executable.
-.PHONY: clean
+# Test Build Rules
+
+.PHONY: test clean-test
+
+# Test target to build the test kernel
+test: $(TEST_BIN)
+
+# Link rules for the test executable.
+bin-$(KARCH)/$(TEST_OUTPUT): $(TEST_OBJ)
+	mkdir -p "$$(dirname $@)"
+	$(KLD) $(TEST_OBJ) $(KLDFLAGS) -o $@
+
+# Compilation rules for *.c files (Test Build)
+$(TEST_OBJ_DIR)/%.c.o: src/%.c GNUmakefile
+	mkdir -p "$$(dirname $@)"
+	$(KCC) $(TEST_CFLAGS) $(KCPPFLAGS) -c $< -o $@
+
+# Compilation rules for *.S files (Test Build)
+$(TEST_OBJ_DIR)/%.S.o: src/%.S GNUmakefile
+	mkdir -p "$$(dirname $@)"
+	$(KCC) $(TEST_CFLAGS) $(KCPPFLAGS) -c $< -o $@
+
+ifeq ($(KARCH),x86_64)
+# Compilation rules for *.asm (nasm) files (Test Build)
+$(TEST_OBJ_DIR)/%.asm.o: src/%.asm GNUmakefile
+	mkdir -p "$$(dirname $@)"
+	nasm $(KNASMFLAGS) $< -o $@
+endif
+
+# Include dependencies for test build.
+-include $(HEADER_DEPS_TEST)
+
+# Clean rules
+.PHONY: clean clean-test
+
 clean:
 	rm -rf bin-$(KARCH) obj-$(KARCH)
+
+clean-test:
+	rm -rf bin-$(KARCH)/$(TEST_OUTPUT) $(TEST_OBJ_DIR)
 
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean

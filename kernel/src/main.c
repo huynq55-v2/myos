@@ -8,6 +8,10 @@
 #include "gdt.h"
 #include "tss.h"
 
+#ifdef TEST
+#include "tests/tests.h"
+#endif
+
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
 // See specification for further info.

@@ -37,7 +37,8 @@ isr\isr_num:
 
 #ifdef TEST
     # Gọi handler giả lập khi kiểm thử
-    call isr\vector_num\_handler
+    lea isr\vector_num\()_handler(%rip), %rax
+    call *%rax
 #else
     # Gọi handler chung khi không kiểm thử
     movq $\vector_num, %rdi   # Tham số 1: số vector
@@ -102,7 +103,8 @@ isr\isr_num:
 
 #ifdef TEST
     # Gọi handler giả lập khi kiểm thử
-    call isr\vector_num\_handler
+    lea isr\vector_num\()_handler(%rip), %rax
+    call *%rax
 #else
     # Gọi handler chung khi không kiểm thử
     movq $\vector_num, %rdi   # Tham số 1: số vector

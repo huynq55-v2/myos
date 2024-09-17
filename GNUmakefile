@@ -251,3 +251,67 @@ clean:
 distclean:
 	$(MAKE) -C kernel distclean
 	rm -rf iso_root *.iso *.hdd kernel-deps limine ovmf
+
+# Define a separate image name for testing
+override TEST_IMAGE_NAME := test-template-$(KARCH)
+
+# Test target to build the test ISO
+test: kernel-deps
+	$(MAKE) -C kernel test
+	@echo "Building test ISO..."
+	rm -rf iso_root_test
+	mkdir -p iso_root_test/boot
+	cp -v kernel/bin-$(KARCH)/test iso_root_test/boot/
+	mkdir -p iso_root_test/boot/limine
+	cp -v limine.conf iso_root_test/boot/limine/
+	mkdir -p iso_root_test/EFI/BOOT
+
+ifeq ($(KARCH),x86_64)
+	cp -v limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root_test/boot/limine/
+	cp -v limine/BOOTX64.EFI iso_root_test/EFI/BOOT/
+	cp -v limine/BOOTIA32.EFI iso_root_test/EFI/BOOT/
+	xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin \
+		-no-emul-boot -boot-load-size 4 -boot-info-table \
+		--efi-boot boot/limine/limine-uefi-cd.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		iso_root_test -o $(TEST_IMAGE_NAME).iso
+	./limine/limine bios-install $(TEST_IMAGE_NAME).iso
+endif
+ifeq ($(KARCH),aarch64)
+	cp -v limine/limine-uefi-cd.bin iso_root_test/boot/limine/
+	cp -v limine/BOOTAA64.EFI iso_root_test/EFI/BOOT/
+	xorriso -as mkisofs \
+		--efi-boot boot/limine/limine-uefi-cd.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		iso_root_test -o $(TEST_IMAGE_NAME).iso
+endif
+ifeq ($(KARCH),riscv64)
+	cp -v limine/limine-uefi-cd.bin iso_root_test/boot/limine/
+	cp -v limine/BOOTRISCV64.EFI iso_root_test/EFI/BOOT/
+	xorriso -as mkisofs \
+		--efi-boot boot/limine/limine-uefi-cd.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		iso_root_test -o $(TEST_IMAGE_NAME).iso
+endif
+ifeq ($(KARCH),loongarch64)
+	cp -v limine/limine-uefi-cd.bin iso_root_test/boot/limine/
+	cp -v limine/BOOTLOONGARCH64.EFI iso_root_test/EFI/BOOT/
+	xorriso -as mkisofs \
+		--efi-boot boot/limine/limine-uefi-cd.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		iso_root_test -o $(TEST_IMAGE_NAME).iso
+endif
+
+	rm -rf iso_root_test
+
+# Run-test target to execute the test ISO
+run-test: test
+	@echo "Running test ISO with QEMU..."
+	qemu-system-$(KARCH) \
+		-M q35 \
+		-drive if=pflash,unit=0,format=raw,file=ovmf/ovmf-code-$(KARCH).fd,readonly=on \
+		-drive if=pflash,unit=1,format=raw,file=ovmf/ovmf-vars-$(KARCH).fd \
+		-cdrom $(TEST_IMAGE_NAME).iso \
+		$(QEMUFLAGS)
+
+.PHONY: test run-test
