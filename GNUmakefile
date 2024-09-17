@@ -263,7 +263,7 @@ test: kernel-deps
 	mkdir -p iso_root_test/boot
 	cp -v kernel/bin-$(KARCH)/test iso_root_test/boot/
 	mkdir -p iso_root_test/boot/limine
-	cp -v limine.conf iso_root_test/boot/limine/
+	sed 's|/kernel|/test|' limine.conf > iso_root_test/boot/limine/limine.conf
 	mkdir -p iso_root_test/EFI/BOOT
 
 ifeq ($(KARCH),x86_64)
