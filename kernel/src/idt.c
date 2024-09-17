@@ -7,7 +7,6 @@
 
 idt_entry_t idt[IDT_SIZE];
 
-// Cấu trúc của IDTR
 typedef struct {
     uint16_t limit;
     uint64_t base;
@@ -25,23 +24,20 @@ void set_idt_gate(int vector, uint64_t handler, uint16_t selector, uint8_t type_
     idt[vector].zero = 0;
 }
 
-// Khai báo ngoại các hàm xử lý (được viết trong assembly)
-extern void isr0();  // Hàm xử lý chia cho 0
-extern void isr3();  // Hàm xử lý breakpoint
+extern void isr0();
+extern void isr3();
+extern void isr8();
 
 void idt_init() {
-    // Thiết lập IDTR
     idtr.limit = (sizeof(idt_entry_t) * IDT_SIZE) - 1;
     idtr.base = (uint64_t)&idt;
 
-    // Xóa toàn bộ IDT
     memset(&idt, 0, sizeof(idt_entry_t) * IDT_SIZE);
 
-    // Thiết lập các hàm xử lý ngoại lệ
-    set_idt_gate(0, (uint64_t)isr0, 0x08, 0x8E, 0); // Chia cho 0
+    set_idt_gate(0, (uint64_t)isr0, 0x08, 0x8E, 0); // Divide by zero
     set_idt_gate(3, (uint64_t)isr3, 0x08, 0x8E, 0); // Breakpoint
+    set_idt_gate(8, (uint64_t)isr8, 0x08, 0x8E, 1); // Double fault uses IST1
 
-    // Nạp IDT vào CPU
     __asm__ __volatile__ ("lidt %0" : : "m"(idtr));
 }
 
@@ -56,6 +52,8 @@ void isr_handler_c(uint64_t vector_number, uint64_t *stack) {
         kprintf("Division by zero exception!\n");
     } else if (vector_number == 3) {
         kprintf("Breakpoint exception!\n");
+    } else if (vector_number == 8) {
+        kprintf("Double fault exception!\n");
     } else {
         kprintf("Unhandled exception: Vector %d\n", (int)vector_number);
     }

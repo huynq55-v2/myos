@@ -6,6 +6,7 @@
 #include "font.h"
 #include "idt.h"
 #include "gdt.h"
+#include "tss.h"
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -66,8 +67,9 @@ void kmain(void) {
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
 
     // Khởi tạo graphics context
-    init_graphics(fb);
+    init_graphics(fb);  
     gdt_init();   // Khởi tạo GDT
+    tss_init();
     idt_init();  // Nạp IDT
 
     // __asm__ __volatile__("int3"); // test trigger breakpoint
@@ -79,10 +81,17 @@ void kmain(void) {
     kprintf("String: %s\n", "Chuoi ky tu");
 
     // Kích hoạt ngoại lệ chia cho 0 bằng assembly
+    // __asm__ __volatile__(
+    //     "movq $1, %rax\n\t"
+    //     "movq $0, %rbx\n\t"
+    //     "divq %rbx\n\t" // Thực hiện phép chia cho 0
+    // );
+
+    // double fault
     __asm__ __volatile__(
-        "movq $1, %rax\n\t"
-        "movq $0, %rbx\n\t"
-        "divq %rbx\n\t" // Thực hiện phép chia cho 0
+        "cli;"                 // Tắt ngắt
+        "movq $0, %rsp;"       // Thiết lập stack pointer về 0 (stack không hợp lệ)
+        "iretq;"               // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
     );
 
     // We're done, just hang...

@@ -1,10 +1,17 @@
+// isr.S
+
 .extern isr_handler_c
 
 .macro ISR_NO_ERROR_CODE isr_num, vector_num
     .global isr\isr_num
 isr\isr_num:
     cli
-    pushq $0                # Đẩy mã lỗi giả (0) để giữ stack alignment
+    andq $~0xF, %rsp   # Căn chỉnh stack 16 byte
+
+    # Đẩy một mã lỗi giả lên stack để đồng nhất với ISR có mã lỗi
+    pushq $0
+
+    # Lưu các thanh ghi
     pushq %rax
     pushq %rbx
     pushq %rcx
@@ -25,6 +32,7 @@ isr\isr_num:
     movq %rsp, %rsi           # Tham số 2: con trỏ stack
     call isr_handler_c
 
+    # Khôi phục các thanh ghi
     popq %r15
     popq %r14
     popq %r13
@@ -40,7 +48,10 @@ isr\isr_num:
     popq %rcx
     popq %rbx
     popq %rax
-    addq $8, %rsp             # Bỏ qua mã lỗi giả
+
+    # Loại bỏ mã lỗi giả khỏi stack
+    addq $8, %rsp
+
     sti
     iretq
 .endm
@@ -49,7 +60,17 @@ isr\isr_num:
     .global isr\isr_num
 isr\isr_num:
     cli
-    # Mã lỗi đã được CPU đẩy vào stack, không cần đẩy thêm
+    andq $~0xF, %rsp   # Căn chỉnh stack 16 byte
+
+    # Stack tại thời điểm này:
+    # [Error Code]
+    # [Return RIP]
+    # [Return CS]
+    # [RFLAGS]
+
+    # Giữ nguyên Error Code trên stack
+
+    # Lưu các thanh ghi
     pushq %rax
     pushq %rbx
     pushq %rcx
@@ -70,6 +91,7 @@ isr\isr_num:
     movq %rsp, %rsi           # Tham số 2: con trỏ stack
     call isr_handler_c
 
+    # Khôi phục các thanh ghi
     popq %r15
     popq %r14
     popq %r13
@@ -85,10 +107,15 @@ isr\isr_num:
     popq %rcx
     popq %rbx
     popq %rax
+
+    # Loại bỏ Error Code khỏi stack
+    addq $8, %rsp
+
     sti
     iretq
 .endm
 
-# Sử dụng macro phù hợp cho từng ngoại lệ
-ISR_NO_ERROR_CODE 0, 0       # Chia cho 0, vector 0, không có mã lỗi
-ISR_NO_ERROR_CODE 3, 3       # Breakpoint, vector 3, không có mã lỗi
+# Sử dụng macro cho các ISR
+ISR_NO_ERROR_CODE 0, 0       # Division by zero
+ISR_NO_ERROR_CODE 3, 3       # Breakpoint
+ISR_WITH_ERROR_CODE 8, 8     # Double fault (có mã lỗi)
