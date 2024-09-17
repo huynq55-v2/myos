@@ -1,6 +1,13 @@
 // isr.S
 
-.extern isr_handler_c
+.extern isr_handler_c   # Hàm xử lý chung cho chế độ không kiểm thử
+
+#ifdef TEST
+    # Khai báo các hàm xử lý giả lập cho kiểm thử
+    .extern isr0_handler
+    .extern isr3_handler
+    .extern isr8_handler
+#endif
 
 .macro ISR_NO_ERROR_CODE isr_num, vector_num
     .global isr\isr_num
@@ -28,9 +35,15 @@ isr\isr_num:
     pushq %r14
     pushq %r15
 
+#ifdef TEST
+    # Gọi handler giả lập khi kiểm thử
+    call isr\vector_num\_handler
+#else
+    # Gọi handler chung khi không kiểm thử
     movq $\vector_num, %rdi   # Tham số 1: số vector
     movq %rsp, %rsi           # Tham số 2: con trỏ stack
     call isr_handler_c
+#endif
 
     # Khôi phục các thanh ghi
     popq %r15
@@ -87,9 +100,15 @@ isr\isr_num:
     pushq %r14
     pushq %r15
 
+#ifdef TEST
+    # Gọi handler giả lập khi kiểm thử
+    call isr\vector_num\_handler
+#else
+    # Gọi handler chung khi không kiểm thử
     movq $\vector_num, %rdi   # Tham số 1: số vector
     movq %rsp, %rsi           # Tham số 2: con trỏ stack
     call isr_handler_c
+#endif
 
     # Khôi phục các thanh ghi
     popq %r15
@@ -116,6 +135,6 @@ isr\isr_num:
 .endm
 
 # Sử dụng macro cho các ISR
-ISR_NO_ERROR_CODE 0, 0       # Division by zero
-ISR_NO_ERROR_CODE 3, 3       # Breakpoint
-ISR_WITH_ERROR_CODE 8, 8     # Double fault (có mã lỗi)
+ISR_NO_ERROR_CODE 0, 0       # Divide by zero (Không có mã lỗi)
+ISR_NO_ERROR_CODE 3, 3       # Breakpoint (Không có mã lỗi)
+ISR_WITH_ERROR_CODE 8, 8     # Double fault (Có mã lỗi)
