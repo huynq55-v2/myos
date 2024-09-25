@@ -1,54 +1,33 @@
 #include "gdt.h"
-#include "tss.h"
-#include "klibc.h"
+#include "stdint.h"
 
-#define GDT_SIZE 5 // Null, code, data, TSS (occupies 2 entries)
+#define GDT_ENTRIES 5
 
-struct gdt_entry gdt[GDT_SIZE];
-struct gdt_ptr gdtp;
+GDTEntry gdt_entries[GDT_ENTRIES];
+GDTR gdt_ptr;
 
-extern tss_t tss;
-
-void gdt_set_gate(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
-    gdt[num].base_low = (base & 0xFFFF);
-    gdt[num].base_middle = (base >> 16) & 0xFF;
-    gdt[num].base_high = (base >> 24) & 0xFF;
-
-    gdt[num].limit_low = (limit & 0xFFFF);
-    gdt[num].granularity = ((limit >> 16) & 0x0F);
-
-    gdt[num].granularity |= (gran & 0xF0);
-    gdt[num].access = access;
+// Function to set a GDT entry
+void set_gdt_entry(GDTEntry *entry, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity)
+{
+    entry->limit_low = limit & 0xFFFF;
+    entry->base_low = base & 0xFFFF;
+    entry->base_middle = (base >> 16) & 0xFF;
+    entry->access = access;
+    entry->granularity = (limit >> 16) & 0x0F;
+    entry->granularity |= granularity;
+    entry->base_high = (base >> 24) & 0xFF;
 }
 
-void gdt_set_tss(int num, uint64_t base, uint32_t limit) {
-    struct tss_entry* tss_desc = (struct tss_entry*)&gdt[num];
-    tss_desc->limit_low = limit & 0xFFFF;
-    tss_desc->base_low = base & 0xFFFF;
-    tss_desc->base_middle = (base >> 16) & 0xFF;
-    tss_desc->access = 0x89; // Present, DPL=0, Type=9 (Available 64-bit TSS)
-    tss_desc->granularity = ((limit >> 16) & 0x0F);
-    tss_desc->base_high = (base >> 24) & 0xFF;
-    tss_desc->base_upper = (base >> 32) & 0xFFFFFFFF;
-    tss_desc->reserved = 0;
-}
+void init_gdt() {
+    gdt_ptr.limit = sizeof(GDTEntry) * GDT_ENTRIES - 1;
+    gdt_ptr.base  = (uint64_t)gdt_entries;
 
-void gdt_init() {
-    gdtp.limit = (sizeof(struct gdt_entry) * 5) - 1;
-    gdtp.base = (uint64_t)&gdt;
+    set_gdt_entry(&gdt_entries[0], 0, 0, 0, 0);                    // Null segment
+    set_gdt_entry(&gdt_entries[1], 0, 0xFFFFFFFF, 0x9A, 0xAF);     // Kernel Code segment (PL0)
+    set_gdt_entry(&gdt_entries[2], 0, 0xFFFFFFFF, 0x92, 0xCF);     // Kernel Data segment (PL0)
+    set_gdt_entry(&gdt_entries[3], 0, 0xFFFFFFFF, 0xFA, 0xAF);     // User Code segment (PL3)
+    set_gdt_entry(&gdt_entries[4], 0, 0xFFFFFFFF, 0xF2, 0xCF);     // User Data segment (PL3)
 
-    memset(&gdt, 0, sizeof(struct gdt_entry) * 5);
-
-    gdt_set_gate(0, 0, 0, 0, 0);                   // Null segment
-    gdt_set_gate(1, 0, 0xFFFFF, 0x9A, 0xA0);       // Code segment
-    gdt_set_gate(2, 0, 0xFFFFF, 0x92, 0xA0);       // Data segment
-
-    // TSS occupies entries 3 and 4
-    uint64_t tss_base = (uint64_t)&tss;
-    uint32_t tss_limit = sizeof(tss_t) - 1;
-
-    gdt_set_tss(3, tss_base, tss_limit);
-
-    // Load GDT into CPU
-    gdt_flush((uint64_t)&gdtp);
+    setGdt(gdt_ptr.limit, gdt_ptr.base);
+    reloadSegments();
 }

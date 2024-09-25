@@ -24,6 +24,7 @@
         "context_switch.C": "cpp",
         "syscall_handler.h": "c",
         "stdio.h": "c",
-        "limine.h": "c"
+        "limine.h": "c",
+        "gdt.h": "c"
     }
 }

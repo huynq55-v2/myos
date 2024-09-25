@@ -6,34 +6,25 @@
 #include <stdint.h>
 
 // Standard GDT entry (8 bytes)
-struct gdt_entry {
+typedef struct
+{
     uint16_t limit_low;
     uint16_t base_low;
-    uint8_t  base_middle;
-    uint8_t  access;
-    uint8_t  granularity;
-    uint8_t  base_high;
-} __attribute__((packed));
+    uint8_t base_middle;
+    uint8_t access;
+    uint8_t granularity; // Granularity flags
+    uint8_t base_high;
+} __attribute__((packed)) GDTEntry;
 
-// TSS descriptor (16 bytes)
-struct tss_entry {
-    uint16_t limit_low;
-    uint16_t base_low;
-    uint8_t  base_middle;
-    uint8_t  access;
-    uint8_t  granularity;
-    uint8_t  base_high;
-    uint32_t base_upper;
-    uint32_t reserved;
-} __attribute__((packed));
-
-// GDT pointer
-struct gdt_ptr {
+typedef struct
+{
     uint16_t limit;
     uint64_t base;
-} __attribute__((packed));
+} __attribute__((packed)) GDTR;
 
-void gdt_init();
-void gdt_flush(uint64_t);
+extern void setGdt(uint16_t limit, uint64_t base);
+extern void reloadSegments(void);
+
+void init_gdt();
 
 #endif // GDT_H

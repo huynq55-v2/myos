@@ -71,9 +71,9 @@ void kmain(void)
 
     // Khởi tạo graphics context
     init_graphics(fb);
-    gdt_init(); // Khởi tạo GDT
-    tss_init();
-    idt_init(); // Nạp IDT
+    init_gdt();
+    // tss_init();
+    // idt_init(); // Nạp IDT
 
 #ifdef TEST
                 // Chạy các kiểm thử
