@@ -96,11 +96,11 @@ void kmain(void)
     // );
 
     // double fault
-    __asm__ __volatile__(
-        "cli;"           // Tắt ngắt
-        "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
-        "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
-    );
+    // __asm__ __volatile__(
+    //     "cli;"           // Tắt ngắt
+    //     "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
+    //     "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
+    // );
 
     // We're done, just hang...
     hcf();
