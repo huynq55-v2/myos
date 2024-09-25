@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "console.h": "c",
+        "unistd.h": "c",
+        "types.h": "c",
+        "syscall.h": "c",
+        "errno.h": "c",
+        "stat.h": "c",
+        "stddef.h": "c",
+        "_ansi.h": "c",
+        "_timespec.h": "c",
+        "time.h": "c",
+        "cdefs.h": "c",
+        "stdint.h": "c",
+        "cstdint": "c",
+        "tss.h": "c",
+        "klibc.h": "c",
+        "memory.h": "c",
+        "idt.h": "c",
+        "stdbool.h": "c",
+        "heap_allocator.h": "c",
+        "syscall_wrapper.h": "c",
+        "paging.h": "c",
+        "context_switch.C": "cpp",
+        "syscall_handler.h": "c",
+        "stdio.h": "c",
+        "limine.h": "c"
+    }
+}
