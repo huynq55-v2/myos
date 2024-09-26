@@ -75,8 +75,8 @@ void kmain(void)
     idt_init(); // Nạp IDT
 
 #ifdef TEST
-                // Chạy các kiểm thử
     run_all_tests();
+    hcf();
 #else
 
     // __asm__ __volatile__("int3"); // test trigger breakpoint
@@ -95,11 +95,11 @@ void kmain(void)
     // );
 
     // double fault
-    __asm__ __volatile__(
-        "cli;"           // Tắt ngắt
-        "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
-        "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
-    );
+    // __asm__ __volatile__(
+    //     "cli;"           // Tắt ngắt
+    //     "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
+    //     "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
+    // );
 
     // We're done, just hang...
     hcf();
