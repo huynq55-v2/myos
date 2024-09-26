@@ -2,7 +2,7 @@
 #include "stdint.h"
 #include "tss.h"
 
-uint8_t gdt[sizeof(GDTEntry32) * GDT_ENTRIES + sizeof(GDTEntry64)];
+uint8_t gdt[sizeof(GDTEntry32) * (GDT_ENTRIES - 1) + sizeof(GDTEntry64)];
 GDTR gdt_ptr;
 
 // Function to set a GDT entry

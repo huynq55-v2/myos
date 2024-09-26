@@ -72,15 +72,12 @@ void kmain(void)
     // Khởi tạo graphics context
     init_graphics(fb);
     init_gdt();
-    // tss_init();
-    // idt_init(); // Nạp IDT
+    idt_init(); // Nạp IDT
 
 #ifdef TEST
                 // Chạy các kiểm thử
     run_all_tests();
 #else
-
-    // __asm__ __volatile__("int3"); // test trigger breakpoint
 
     // Sử dụng hàm kprintf để in ra giá trị
     kprintf("Hello, World!\n");
@@ -88,19 +85,12 @@ void kmain(void)
     kprintf("Hex: %x\n", 255);
     kprintf("String: %s\n", "Chuoi ky tu");
 
-    // Kích hoạt ngoại lệ chia cho 0 bằng assembly
-    // __asm__ __volatile__(
-    //     "movq $1, %rax\n\t"
-    //     "movq $0, %rbx\n\t"
-    //     "divq %rbx\n\t" // Thực hiện phép chia cho 0
-    // );
-
     // double fault
-    // __asm__ __volatile__(
-    //     "cli;"           // Tắt ngắt
-    //     "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
-    //     "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
-    // );
+    __asm__ __volatile__(
+        "cli;"           // Tắt ngắt
+        "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
+        "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
+    );
 
     // We're done, just hang...
     hcf();

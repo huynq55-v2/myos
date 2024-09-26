@@ -2,6 +2,7 @@
 #include "font.h"  // Để truy cập dữ liệu font như `roboto_glyphs`
 #include "limine.h"
 #include "klibc.h"
+#include <stdarg.h>
 
 static graphics_context_t g_ctx;
 
@@ -171,134 +172,182 @@ void print(const char *text) {
     print_text(text);
 }
 
-// Hàm chuyển đổi số nguyên thành chuỗi
-void itoa(int value, char *str, int base) {
-    char *digits = "0123456789ABCDEF";
-    char *ptr = str;
-    char *ptr1 = str;
-    char tmp_char;
-    int tmp_value;
+// Hàm chuyển đổi số nguyên có dấu thành chuỗi
+void itoa(int64_t value, char *str, int base) {
+    char *digits = "0123456789abcdef";
+    char buffer[65];
+    char *ptr = &buffer[64];
+    int is_negative = 0;
 
-    // Xử lý số âm trong hệ thập phân (base 10)
-    if (value < 0 && base == 10) {
-        *ptr++ = '-';
-        value = -value;
+    *ptr = '\0';
+
+    if (value == 0) {
+        *--ptr = '0';
+    } else {
+        if (value < 0) {
+            is_negative = 1;
+            value = -value;
+        }
+        while (value != 0) {
+            *--ptr = digits[value % base];
+            value /= base;
+        }
+        if (is_negative) {
+            *--ptr = '-';
+        }
     }
 
-    // Chuyển đổi số thành chuỗi
-    do {
-        tmp_value = value;
-        value /= base;
-        *ptr++ = digits[tmp_value % base];
-    } while (value);
-
-    // Thêm ký tự kết thúc chuỗi
-    *ptr-- = '\0';
-
-    // Đảo ngược chuỗi
-    while (ptr1 < ptr) {
-        tmp_char = *ptr;
-        *ptr-- = *ptr1;
-        *ptr1++ = tmp_char;
+    // Sao chép kết quả vào str
+    while (*ptr) {
+        *str++ = *ptr++;
     }
+    *str = '\0';
 }
 
-#include <stdarg.h>
+// Hàm chuyển đổi số nguyên không dấu thành chuỗi
+void utoa(uint64_t value, char *str, int base) {
+    char *digits = "0123456789abcdef";
+    char buffer[65];
+    char *ptr = &buffer[64];
 
-void itoa_unsigned(uint64_t value, char *str, int base) {
-    char *digits = "0123456789ABCDEF";
-    char *ptr = str;
-    char *ptr1 = str;
-    char tmp_char;
-    uint64_t tmp_value;
+    *ptr = '\0';
 
-    // Chuyển đổi số thành chuỗi
-    do {
-        tmp_value = value;
-        value /= base;
-        *ptr++ = digits[tmp_value % base];
-    } while (value);
-
-    // Thêm ký tự kết thúc chuỗi
-    *ptr-- = '\0';
-
-    // Đảo ngược chuỗi
-    while (ptr1 < ptr) {
-        tmp_char = *ptr;
-        *ptr-- = *ptr1;
-        *ptr1++ = tmp_char;
+    if (value == 0) {
+        *--ptr = '0';
+    } else {
+        while (value != 0) {
+            *--ptr = digits[value % base];
+            value /= base;
+        }
     }
+
+    // Sao chép kết quả vào str
+    while (*ptr) {
+        *str++ = *ptr++;
+    }
+    *str = '\0';
 }
 
 void kprintf(const char *format, ...) {
-    char buffer[64];  // Tăng kích thước bộ đệm
-    const char *ptr;
+    char buffer[128];
+    const char *fmt_ptr;
     va_list args;
     va_start(args, format);
 
-    // Duyệt qua từng ký tự trong chuỗi format
-    for (ptr = format; *ptr != '\0'; ptr++) {
-        if (*ptr == '%') {
-            ptr++;
-            switch (*ptr) {
-                case 'd': {
-                    // In số nguyên thập phân
-                    int value = va_arg(args, int);
+    for (fmt_ptr = format; *fmt_ptr != '\0'; fmt_ptr++) {
+        if (*fmt_ptr == '%') {
+            fmt_ptr++;
+
+            // Handle length modifiers
+            char length = '\0';
+            if (*fmt_ptr == 'l' || *fmt_ptr == 'h') {
+                length = *fmt_ptr++;
+                if (*fmt_ptr == 'l' || *fmt_ptr == 'h') {
+                    // Support 'll' and 'hh' if needed
+                    length = *fmt_ptr++;
+                }
+            }
+
+            char specifier = *fmt_ptr;
+
+            switch (specifier) {
+                case 'd':
+                case 'i': {
+                    int64_t value;
+                    if (length == 'l') {
+                        value = va_arg(args, long);
+                    } else if (length == 'h') {
+                        value = (short)va_arg(args, int);
+                    } else {
+                        value = va_arg(args, int);
+                    }
                     itoa(value, buffer, 10);
                     print_text(buffer);
                     break;
                 }
                 case 'u': {
-                    // In số nguyên không dấu
-                    unsigned int value = va_arg(args, unsigned int);
-                    itoa_unsigned(value, buffer, 10);
+                    uint64_t value;
+                    if (length == 'l') {
+                        value = va_arg(args, unsigned long);
+                    } else if (length == 'h') {
+                        value = (unsigned short)va_arg(args, unsigned int);
+                    } else {
+                        value = va_arg(args, unsigned int);
+                    }
+                    utoa(value, buffer, 10);
                     print_text(buffer);
                     break;
                 }
-                case 'x': {
-                    // In số nguyên hệ thập lục phân
-                    unsigned int value = va_arg(args, unsigned int);
-                    itoa_unsigned(value, buffer, 16);
+                case 'x':
+                case 'X': {
+                    uint64_t value;
+                    if (length == 'l') {
+                        value = va_arg(args, unsigned long);
+                    } else if (length == 'h') {
+                        value = (unsigned short)va_arg(args, unsigned int);
+                    } else {
+                        value = va_arg(args, unsigned int);
+                    }
+                    utoa(value, buffer, 16);
+                    if (specifier == 'X') {
+                        // Convert letters to uppercase
+                        for (char *p = buffer; *p; p++) {
+                            if (*p >= 'a' && *p <= 'f') {
+                                *p -= 32;
+                            }
+                        }
+                    }
                     print_text("0x");
                     print_text(buffer);
                     break;
                 }
+                case 'o': {
+                    uint64_t value;
+                    if (length == 'l') {
+                        value = va_arg(args, unsigned long);
+                    } else if (length == 'h') {
+                        value = (unsigned short)va_arg(args, unsigned int);
+                    } else {
+                        value = va_arg(args, unsigned int);
+                    }
+                    utoa(value, buffer, 8);
+                    print_text(buffer);
+                    break;
+                }
                 case 'p': {
-                    // In địa chỉ bộ nhớ (con trỏ)
                     void *ptr_value = va_arg(args, void*);
                     uint64_t addr = (uint64_t)ptr_value;
-                    itoa_unsigned(addr, buffer, 16);
+                    utoa(addr, buffer, 16);
                     print_text("0x");
                     print_text(buffer);
                     break;
                 }
                 case 'c': {
-                    // In ký tự
                     char c = (char)va_arg(args, int);
                     char str[2] = {c, '\0'};
                     print_text(str);
                     break;
                 }
                 case 's': {
-                    // In chuỗi ký tự
                     char *str = va_arg(args, char*);
                     print_text(str);
                     break;
                 }
                 case '%': {
-                    // In ký tự '%'
                     print_text("%");
                     break;
                 }
                 default:
-                    // Nếu không phải định dạng hợp lệ, in trực tiếp ký tự
+                    // If the format is invalid, print it directly
                     print_text("%");
-                    print_text((char[]){*ptr, '\0'});
+                    char invalid[2] = {*fmt_ptr, '\0'};
+                    print_text(invalid);
                     break;
             }
         } else {
-            // In trực tiếp các ký tự không phải là định dạng
-            print_text((char[]){*ptr, '\0'});
+            // Print regular characters
+            char ch[2] = {*fmt_ptr, '\0'};
+            print_text(ch);
         }
     }
 

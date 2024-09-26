@@ -27,6 +27,7 @@
         "limine.h": "c",
         "gdt.h": "c",
         "stacks.h": "c",
-        "functional": "c"
+        "functional": "c",
+        "graphics.h": "c"
     }
 }

@@ -15,8 +15,17 @@ typedef struct {
     uint32_t zero;          // Dự trữ
 } __attribute__((packed)) idt_entry_t;
 
+typedef struct {
+    uint64_t error_code; // Only present if an error code is pushed
+    uint64_t rip;
+    uint64_t cs;
+    uint64_t rflags;
+} isr_stack_t;
+
 void idt_init();
-void isr_handler_c(uint64_t vector_number, uint64_t *stack);
+void isr_handler_c(uint64_t vector_number, isr_stack_t *stack);
 void set_idt_gate(int vector, uint64_t handler, uint16_t selector, uint8_t type_attr, uint8_t ist);
+
+extern void *isr_table[];
 
 #endif // IDT_H
