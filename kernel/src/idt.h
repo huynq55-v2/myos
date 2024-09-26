@@ -28,4 +28,15 @@ void set_idt_gate(int vector, uint64_t handler, uint16_t selector, uint8_t type_
 
 extern void *isr_table[];
 
+extern idt_entry_t idt[]; // Mảng IDT
+
+typedef struct {
+    uint16_t limit;
+    uint64_t base;
+} __attribute__((packed)) idtr_t;
+
+extern idtr_t idtr;
+
+#define IDT_SIZE 256
+
 #endif // IDT_H

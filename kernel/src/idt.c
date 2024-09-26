@@ -3,14 +3,7 @@
 #include "klibc.h"
 #include "graphics.h"
 
-#define IDT_SIZE 256
-
 idt_entry_t idt[IDT_SIZE];
-
-typedef struct {
-    uint16_t limit;
-    uint64_t base;
-} __attribute__((packed)) idtr_t;
 
 idtr_t idtr;
 

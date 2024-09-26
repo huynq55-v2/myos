@@ -36,6 +36,10 @@ typedef struct
     uint64_t base;
 } __attribute__((packed)) GDTR;
 
+// Khai báo các biến toàn cục
+extern uint8_t gdt[];      // Mảng GDT
+extern GDTR gdt_ptr;       // GDTR
+
 extern void setGdt(uint16_t limit, uint64_t base);
 extern void reloadSegments(void);
 
