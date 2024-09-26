@@ -27,8 +27,8 @@ extern void loadTss();
 
 void load_tss(uint16_t tss_selector) {
     __asm__ volatile (
-        "ltr %%ax"  // Load Task Register (LTR)
+        "ltr %0"
         :
-        : "a" (tss_selector)  // Pass the selector via the 'ax' register
+        : "r" (tss_selector)
     );
 }

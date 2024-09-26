@@ -20,21 +20,19 @@ setGdt:
 
 # Function to reload segment registers (reloadSegments)
 reloadSegments:
-    # Reload CS register:
-    pushq $0x08                # Push code segment selector (0x08) onto the stack
-    lea   .reload_CS(%rip), %rax  # Load address of .reload_CS into RAX
-    pushq %rax                 # Push this value onto the stack
-    lretq                      # Perform far return to reload CS
+    pushq $0x08          # Kernel code segment selector (index 1 * 8)
+    lea .reload_CS(%rip), %rax
+    pushq %rax
+    lretq
 
 .reload_CS:
-    # Reload data segment registers
-    movw  $0x10, %ax           # Data segment selector (0x10)
-    movw  %ax, %ds
-    movw  %ax, %es
-    movw  %ax, %fs
-    movw  %ax, %gs
-    movw  %ax, %ss
-    ret                        # Return after reloading the segments
+    movw $0x10, %ax      # Kernel data segment selector (index 2 * 8)
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+    movw %ax, %ss
+    ret
 
 # Function to load TSS (loadTss)
 loadTss:

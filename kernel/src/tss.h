@@ -21,7 +21,7 @@ typedef struct {
     uint64_t reserved3;
     uint16_t reserved4;
     uint16_t iomap_base;
-} __attribute__((packed)) TSS;
+} __attribute__((packed, aligned(8))) TSS;
 
 extern TSS tss;
 
