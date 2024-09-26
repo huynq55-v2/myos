@@ -1,7 +1,6 @@
 #include "gdt.h"
 #include "stdint.h"
-
-#define GDT_ENTRIES 5
+#include "tss.h"
 
 GDTEntry gdt_entries[GDT_ENTRIES];
 GDTR gdt_ptr;
@@ -28,6 +27,13 @@ void init_gdt() {
     set_gdt_entry(&gdt_entries[3], 0, 0xFFFFFFFF, 0xFA, 0xAF);     // User Code segment (PL3)
     set_gdt_entry(&gdt_entries[4], 0, 0xFFFFFFFF, 0xF2, 0xCF);     // User Data segment (PL3)
 
+    // Initialize the TSS
+    init_tss();
+    set_gdt_entry(&gdt_entries[5], (uint32_t)&tss, sizeof(TSS), 0x89, 0x40); // TSS Descriptor
+
     setGdt(gdt_ptr.limit, gdt_ptr.base);
     reloadSegments();
+
+    // Load the TSS selector (assuming it's the 6th entry, selector = 5 * 8 = 0x28)
+    load_tss(0x28);
 }

@@ -1,12 +1,14 @@
-    .data
-    # Define GDTR with space for limit and base address
+// gdt.S
+
+.data
     gdtr:
         .word 0          # Limit storage (2 bytes)
         .quad 0          # Base storage (8 bytes)
 
-    .text
-    .global setGdt
-    .global reloadSegments
+.text
+.global setGdt
+.global reloadSegments
+.global loadTss
 
 # Function to set GDTR (setGdt)
 setGdt:
@@ -33,3 +35,9 @@ reloadSegments:
     movw  %ax, %gs
     movw  %ax, %ss
     ret                        # Return after reloading the segments
+
+# Function to load TSS (loadTss)
+loadTss:
+    # AX contains the TSS selector
+    ltr %ax
+    ret

@@ -25,6 +25,7 @@
         "syscall_handler.h": "c",
         "stdio.h": "c",
         "limine.h": "c",
-        "gdt.h": "c"
+        "gdt.h": "c",
+        "stacks.h": "c"
     }
 }

@@ -1,21 +1,34 @@
 // tss.c
+
 #include "tss.h"
-#include "klibc.h"
+#include "gdt.h"
+#include "stacks.h"
 
-extern void tss_flush();
+TSS tss;
 
-tss_t tss __attribute__((aligned(16)));
+void init_tss() {
+    // Zero out the TSS structure
+    for(int i = 0; i < sizeof(TSS)/8; i++) {
+        ((uint64_t*)&tss)[i] = 0;
+    }
 
-uint8_t ist1_stack[4096] __attribute__((aligned(16)));
-uint8_t kernel_stack[4096] __attribute__((aligned(16)));
+    // Set the stack pointer for Ring 0 (kernel)
+    tss.rsp0 = kernel_stack_top;
 
-void tss_init() {
-    memset(&tss, 0, sizeof(tss_t));
+    // Optionally set IST pointers
+    // For example, IST1 can be used for double faults
+    tss.ist1 = ist1_stack_top;
 
-    tss.rsp0 = (uint64_t)&kernel_stack[4096];
-    tss.ist1 = (uint64_t)&ist1_stack[4096];
+    // Set the I/O Map Base Address to the end of the TSS
+    tss.iomap_base = sizeof(TSS);
+}
 
-    tss.iomap_base = sizeof(tss_t);
+extern void loadTss();
 
-    tss_flush();
+void load_tss(uint16_t tss_selector) {
+    __asm__ volatile (
+        "ltr %%ax"  // Load Task Register (LTR)
+        :
+        : "a" (tss_selector)  // Pass the selector via the 'ax' register
+    );
 }
