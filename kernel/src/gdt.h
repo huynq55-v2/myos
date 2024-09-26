@@ -41,7 +41,7 @@ extern void reloadSegments(void);
 
 void init_gdt();
 
-extern GDTEntry32 gdt_entries[];
+extern uint8_t gdt_entries[];
 
 #define GDT_ENTRIES 7 // Increased to 6 to include TSS
 
