@@ -79,11 +79,20 @@ void kmain(void)
     run_all_tests();
 #else
 
+    // __asm__ __volatile__("int3"); // test trigger breakpoint
+
     // Sử dụng hàm kprintf để in ra giá trị
     kprintf("Hello, World!\n");
     kprintf("3 + 4 == %d\n", 7);
     kprintf("Hex: %x\n", 255);
     kprintf("String: %s\n", "Chuoi ky tu");
+
+    // Kích hoạt ngoại lệ chia cho 0 bằng assembly
+    // __asm__ __volatile__(
+    //     "movq $1, %rax\n\t"
+    //     "movq $0, %rbx\n\t"
+    //     "divq %rbx\n\t" // Thực hiện phép chia cho 0
+    // );
 
     // double fault
     __asm__ __volatile__(

@@ -103,6 +103,10 @@ void idt_init() {
         set_idt_gate(i, (uint64_t)isr_table[i], 0x08, 0x8E, 0);
     }
 
+    // Thiết lập IST cho double fault handler (vector 8)
+    set_idt_gate(8, (uint64_t)isr_table[8], 0x08, 0x8E, 1);
+
+
     __asm__ __volatile__ ("lidt %0" : : "m"(idtr));
     __asm__ __volatile__ ("sti");
 }

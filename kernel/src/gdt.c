@@ -2,7 +2,7 @@
 #include "stdint.h"
 #include "tss.h"
 
-uint8_t gdt[sizeof(GDTEntry32) * (GDT_ENTRIES - 1) + sizeof(GDTEntry64)];
+uint8_t gdt[sizeof(GDTEntry32) * 5 + sizeof(GDTEntry64)];
 GDTR gdt_ptr;
 
 // Function to set a GDT entry
@@ -32,7 +32,7 @@ void set_tss_descriptor(GDTEntry64 *entry, uint64_t base, uint32_t limit)
 void init_gdt() {
     // Pointers to the entries within the gdt array
     GDTEntry32 *entries32 = (GDTEntry32 *)gdt;
-    GDTEntry64 *tss_entry = (GDTEntry64 *)(gdt + sizeof(GDTEntry32) * GDT_ENTRIES);
+    GDTEntry64 *tss_entry = (GDTEntry64 *)(gdt + sizeof(GDTEntry32) * 5);
 
     // Set up code and data segments
     set_gdt_entry(&entries32[0], 0, 0, 0, 0);          // Null segment
