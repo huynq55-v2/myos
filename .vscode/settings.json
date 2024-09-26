@@ -26,6 +26,7 @@
         "stdio.h": "c",
         "limine.h": "c",
         "gdt.h": "c",
-        "stacks.h": "c"
+        "stacks.h": "c",
+        "functional": "c"
     }
 }

@@ -205,8 +205,33 @@ void itoa(int value, char *str, int base) {
 
 #include <stdarg.h>
 
+void itoa_unsigned(uint64_t value, char *str, int base) {
+    char *digits = "0123456789ABCDEF";
+    char *ptr = str;
+    char *ptr1 = str;
+    char tmp_char;
+    uint64_t tmp_value;
+
+    // Chuyển đổi số thành chuỗi
+    do {
+        tmp_value = value;
+        value /= base;
+        *ptr++ = digits[tmp_value % base];
+    } while (value);
+
+    // Thêm ký tự kết thúc chuỗi
+    *ptr-- = '\0';
+
+    // Đảo ngược chuỗi
+    while (ptr1 < ptr) {
+        tmp_char = *ptr;
+        *ptr-- = *ptr1;
+        *ptr1++ = tmp_char;
+    }
+}
+
 void kprintf(const char *format, ...) {
-    char buffer[32];  // Bộ đệm tạm thời để lưu giá trị số
+    char buffer[64];  // Tăng kích thước bộ đệm
     const char *ptr;
     va_list args;
     va_start(args, format);
@@ -219,21 +244,50 @@ void kprintf(const char *format, ...) {
                 case 'd': {
                     // In số nguyên thập phân
                     int value = va_arg(args, int);
-                    itoa(value, buffer, 10);  // Chuyển đổi số thành chuỗi
-                    print_text(buffer);       // In chuỗi ra màn hình
+                    itoa(value, buffer, 10);
+                    print_text(buffer);
+                    break;
+                }
+                case 'u': {
+                    // In số nguyên không dấu
+                    unsigned int value = va_arg(args, unsigned int);
+                    itoa_unsigned(value, buffer, 10);
+                    print_text(buffer);
                     break;
                 }
                 case 'x': {
                     // In số nguyên hệ thập lục phân
-                    int value = va_arg(args, int);
-                    itoa(value, buffer, 16);  // Chuyển đổi số thành chuỗi hệ 16
-                    print_text(buffer);       // In chuỗi ra màn hình
+                    unsigned int value = va_arg(args, unsigned int);
+                    itoa_unsigned(value, buffer, 16);
+                    print_text("0x");
+                    print_text(buffer);
+                    break;
+                }
+                case 'p': {
+                    // In địa chỉ bộ nhớ (con trỏ)
+                    void *ptr_value = va_arg(args, void*);
+                    uint64_t addr = (uint64_t)ptr_value;
+                    itoa_unsigned(addr, buffer, 16);
+                    print_text("0x");
+                    print_text(buffer);
+                    break;
+                }
+                case 'c': {
+                    // In ký tự
+                    char c = (char)va_arg(args, int);
+                    char str[2] = {c, '\0'};
+                    print_text(str);
                     break;
                 }
                 case 's': {
                     // In chuỗi ký tự
                     char *str = va_arg(args, char*);
-                    print_text(str);          // In chuỗi ra màn hình
+                    print_text(str);
+                    break;
+                }
+                case '%': {
+                    // In ký tự '%'
+                    print_text("%");
                     break;
                 }
                 default:
