@@ -34,19 +34,19 @@ void test_gdt_entries() {
     GDTEntry32 *entries32 = (GDTEntry32 *)gdt;
 
     // Kiểm tra các mục code và data segments
-    if (entries32[0].access != 0x00) { // Null segment
+    if ((entries32[0].access & 0xFE) != 0x00) { // Null segment
         result = false;
     }
-    if (entries32[1].access != 0x9A) { // Kernel code segment
+    if ((entries32[1].access & 0xFE) != 0x9A) { // Kernel code segment
         result = false;
     }
-    if (entries32[2].access != 0x92) { // Kernel data segment
+    if ((entries32[2].access & 0xFE) != 0x92) { // Kernel data segment
         result = false;
     }
-    if (entries32[3].access != 0xFA) { // User code segment
+    if ((entries32[3].access & 0xFE) != 0xFA) { // User code segment
         result = false;
     }
-    if (entries32[4].access != 0xF2) { // User data segment
+    if ((entries32[4].access & 0xFE) != 0xF2) { // User data segment
         result = false;
     }
 
@@ -89,36 +89,49 @@ void test_tss() {
     test_print_result("TSS Initialization Test", result);
 }
 
-// Kiểm thử Descriptor TSS trong GDT
 void test_tss_descriptor() {
     bool result = true;
     GDTEntry64 *tss_entry = (GDTEntry64 *)(gdt + sizeof(GDTEntry32) * 5);
 
     // Kiểm tra các trường của Descriptor TSS
-    // Giả sử rằng địa chỉ &tss và sizeof(TSS) đã được thiết lập chính xác
     uint64_t expected_base = (uint64_t)&tss;
     uint32_t expected_limit = sizeof(TSS);
 
+    // Kiểm tra trường access: 0x89 (Available) hoặc 0x8B (Busy)
+    if (tss_entry->access != 0x89 && tss_entry->access != 0x8B) {
+        result = false;
+        kprintf("3\n");
+        kprintf("Expected access: 0x89 or 0x8B, Actual access: 0x%x\n", tss_entry->access);
+    }
+
+    // Kiểm tra các trường khác nếu cần
+    if (tss_entry->limit_low != (expected_limit & 0xFFFF)) {
+        result = false;
+        kprintf("Limit low condition failed: 0x%x != 0x%x\n", tss_entry->limit_low, (expected_limit & 0xFFFF));
+    }
     if (tss_entry->base_low != (expected_base & 0xFFFF)) {
         result = false;
+        kprintf("Base low condition failed: 0x%x != 0x%x\n", tss_entry->base_low, (expected_base & 0xFFFF));
     }
     if (tss_entry->base_middle1 != ((expected_base >> 16) & 0xFF)) {
         result = false;
+        kprintf("Base middle1 condition failed: 0x%x != 0x%x\n", tss_entry->base_middle1, ((expected_base >> 16) & 0xFF));
     }
-    if (tss_entry->access != 0x89) { // Present, privilege level 0, type 9 (available 64-bit TSS)
+    if (tss_entry->granularity != ((expected_limit >> 16) & 0x0F)) {
         result = false;
-    }
-    if ((tss_entry->granularity & 0x0F) != ((expected_limit >> 16) & 0x0F)) {
-        result = false;
+        kprintf("Granularity condition failed: 0x%x != 0x%x\n", tss_entry->granularity, ((expected_limit >> 16) & 0x0F));
     }
     if (tss_entry->base_middle2 != ((expected_base >> 24) & 0xFF)) {
         result = false;
+        kprintf("Base middle2 condition failed: 0x%x != 0x%x\n", tss_entry->base_middle2, ((expected_base >> 24) & 0xFF));
     }
     if (tss_entry->base_high != (expected_base >> 32)) {
         result = false;
+        kprintf("Base high condition failed: 0x%x != 0x%lx\n", tss_entry->base_high, (expected_base >> 32));
     }
     if (tss_entry->reserved != 0) {
         result = false;
+        kprintf("Reserved condition failed: 0x%x != 0x0\n", tss_entry->reserved);
     }
 
     test_print_result("TSS Descriptor Test", result);
