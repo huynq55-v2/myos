@@ -86,9 +86,6 @@ void kmain(void)
     init_gdt();
     idt_init(); // Nạp IDT
 
-    // Khởi tạo bộ phân bổ bộ nhớ slab
-    init_memory_allocator();
-
     
 
 #ifdef TEST
