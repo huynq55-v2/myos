@@ -7,6 +7,7 @@
 #include "idt.h"
 #include "gdt.h"
 #include "tss.h"
+#include "slab_allocator.h"
 
 #ifdef TEST
 void run_all_tests();
@@ -26,6 +27,18 @@ __attribute__((used, section(".requests"))) static volatile LIMINE_BASE_REVISION
 __attribute__((used, section(".requests"))) static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0};
+
+// Thêm yêu cầu HHDM
+__attribute__((used, section(".requests"))) volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST,
+    .revision = 0
+};
+
+// Thêm yêu cầu MEMMAP
+__attribute__((used, section(".requests"))) volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
+    .revision = 0
+};
 
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
@@ -73,6 +86,11 @@ void kmain(void)
     init_graphics(fb);
     init_gdt();
     idt_init(); // Nạp IDT
+
+    // Khởi tạo bộ phân bổ bộ nhớ slab
+    init_memory_allocator();
+
+    
 
 #ifdef TEST
     run_all_tests();
