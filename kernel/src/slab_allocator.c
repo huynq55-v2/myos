@@ -103,6 +103,12 @@ void slab_free(void* ptr) {
     // Đánh dấu khối là tự do
     block->is_free = 1;
 
+    // Xóa vùng nhớ đã được giải phóng
+    char* start = (char*)ptr;
+    for (size_t i = 0; i < block->size; i++) {
+        start[i] = 0;
+    }
+
     // Thêm khối vào danh sách các khối tự do
     block->next = free_list;
     free_list = block;
