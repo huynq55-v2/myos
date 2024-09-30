@@ -7,7 +7,6 @@
 #include "idt.h"
 #include "gdt.h"
 #include "tss.h"
-#include "slab_allocator.h"
 
 #ifdef TEST
 void run_all_tests();
