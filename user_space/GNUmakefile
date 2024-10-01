@@ -3,6 +3,9 @@
 # Thư mục chứa file .o (bạn có thể override biến này từ Makefile của kernel)
 OBJ_OUTPUT_DIR ?= build
 
+# Đường dẫn đến file linker script
+LINKER_SCRIPT ?= src/linker_user.ld
+
 # Danh sách tất cả các file .c trong thư mục src
 SRC_FILES := $(wildcard src/*.c)
 
@@ -14,7 +17,7 @@ all: src/hello_user.elf
 
 # Quy tắc để build hello_user.elf từ tất cả các file .o
 src/hello_user.elf: $(OBJ_FILES)
-	$(KLD) -o src/hello_user.elf $(OBJ_FILES)
+	$(KLD) -T $(LINKER_SCRIPT) -o $@ $(OBJ_FILES)
 
 # Quy tắc để compile từng file .c thành file .o
 $(OBJ_OUTPUT_DIR)/%.o: src/%.c
