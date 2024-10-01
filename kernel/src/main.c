@@ -62,6 +62,8 @@ static void hcf(void)
     }
 }
 
+uintptr_t hhdm_offset;
+
 // The following will be our kernel's entry point.
 // If renaming kmain() to something else, make sure to change the
 // linker script accordingly.
@@ -87,46 +89,11 @@ void kmain(void)
     init_gdt();
     idt_init(); // Nạp IDT
 
-    buddy_init(memmap_request.response);
+    hhdm_offset = hhdm_request.response->offset;
 
-    kprintf("Buddy Allocator initialized.\n");
+    buddy_init();
 
-    // Allocate 4KB of memory (1 page)
-    void *mem1 = buddy_alloc(4096);
-    if (mem1) {
-        kprintf("Allocated 4KB at address: %p\n", mem1);
-    } else {
-        kprintf("Failed to allocate 4KB\n");
-    }
-
-    // Allocate 8KB of memory (2 pages)
-    void *mem2 = buddy_alloc(8192);
-    if (mem2) {
-        kprintf("Allocated 8KB at address: %p\n", mem2);
-    } else {
-        kprintf("Failed to allocate 8KB\n");
-    }
-
-    // Free the 4KB memory
-    buddy_free(mem1);
-    kprintf("Freed 4KB at address: %p\n", mem1);
-
-    // Allocate 16KB of memory (4 pages)
-    void *mem3 = buddy_alloc(16384);
-    if (mem3) {
-        kprintf("Allocated 16KB at address: %p\n", mem3);
-    } else {
-        kprintf("Failed to allocate 16KB\n");
-    }
-
-    // Free the 8KB and 16KB memory
-    buddy_free(mem2);
-    kprintf("Freed 8KB at address: %p\n", mem2);
-
-    buddy_free(mem3);
-    kprintf("Freed 16KB at address: %p\n", mem3);
-
-    kprintf("Memory allocation and deallocation completed.\n");
+    
 
 #ifdef TEST
     run_all_tests();

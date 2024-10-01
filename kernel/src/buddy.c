@@ -161,3 +161,28 @@ void buddy_free(void *ptr, size_t size) {
     
     spin_unlock(&buddy_lock);
 }
+
+void buddy_print_free_memory() {
+    spin_lock(&buddy_lock);
+
+    size_t total_free_memory = 0;
+
+    for (int order = 0; order <= MAX_ORDER - MIN_ORDER; order++) {
+        size_t block_size = 1UL << (order + MIN_ORDER);  // Calculate block size for this order
+        struct free_block *block = free_lists[order];
+        size_t block_count = 0;
+
+        // Traverse the free list for this order
+        while (block) {
+            block_count++;
+            block = block->next;
+        }
+
+        total_free_memory += block_count * block_size;
+    }
+
+    spin_unlock(&buddy_lock);
+
+    // Print the total free memory
+    kprintf("Total free memory: %d bytes\n", total_free_memory);
+}

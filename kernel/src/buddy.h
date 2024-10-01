@@ -12,6 +12,7 @@ struct free_block {
 };
 
 void buddy_init();
+void buddy_print_free_memory();
 void* buddy_alloc(size_t size);
 void buddy_free(void *ptr, size_t size);
 
