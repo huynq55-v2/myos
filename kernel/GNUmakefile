@@ -1,9 +1,10 @@
+.DEFAULT_GOAL := all
+
 # Nuke built-in rules and variables.
 MAKEFLAGS += -rR
 .SUFFIXES:
 
 # This is the name that our final executable will have.
-# Change as needed.
 override OUTPUT := kernel
 
 # Convenience macro to reliably declare user overridable variables.
@@ -148,6 +149,15 @@ override KLDFLAGS += \
     -gc-sections \
     -T linker-$(KARCH).ld
 
+# Đường dẫn đến file hello_user.elf
+HELLO_USER_ELF = ../user_space/src/hello_user.elf
+
+# File object tương ứng
+HELLO_USER_OBJ = obj-$(KARCH)/hello_user.o
+
+# Thêm hello_user.o vào danh sách các object files
+override OBJ += $(HELLO_USER_OBJ)
+
 # Use "find" to glob all *.c, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
 override CFILES := $(shell cd src && find -L * -type f -name '*.c' | LC_ALL=C sort)
@@ -163,6 +173,17 @@ override HEADER_DEPS := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S
 ifeq ($(KARCH),x86_64)
 override HEADER_DEPS += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm=.asm.d))
 endif
+
+# Quy tắc để tạo hello_user.o từ hello_user.elf
+$(HELLO_USER_OBJ): $(HELLO_USER_ELF)
+	@echo "Building hello_user.o from hello_user.elf"
+	mkdir -p obj-$(KARCH)
+	$(KLD) -r -b binary $(HELLO_USER_ELF) -o $(HELLO_USER_OBJ)
+
+# Dependency để build hello_user.elf nếu chưa có
+$(HELLO_USER_ELF):
+	@echo "Building hello_user.elf"
+	$(MAKE) -C ../user_space
 
 # Define Test Build Variables
 TEST_OUTPUT := test
@@ -194,18 +215,18 @@ bin-$(KARCH)/$(OUTPUT): GNUmakefile linker-$(KARCH).ld $(OBJ)
 
 # Compilation rules for *.c files.
 obj-$(KARCH)/%.c.o: src/%.c GNUmakefile
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dir $@)"
 	$(KCC) $(KCFLAGS) $(KCPPFLAGS) -c $< -o $@
 
 # Compilation rules for *.S files.
 obj-$(KARCH)/%.S.o: src/%.S GNUmakefile
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dir $@)"
 	$(KCC) $(KCFLAGS) $(KCPPFLAGS) -c $< -o $@
 
 ifeq ($(KARCH),x86_64)
 # Compilation rules for *.asm (nasm) files.
 obj-$(KARCH)/%.asm.o: src/%.asm GNUmakefile
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dir $@)"
 	nasm $(KNASMFLAGS) $< -o $@
 endif
 
@@ -218,23 +239,23 @@ test: $(TEST_BIN)
 
 # Link rules for the test executable.
 bin-$(KARCH)/$(TEST_OUTPUT): $(TEST_OBJ)
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dirname $@)"
 	$(KLD) $(TEST_OBJ) $(KLDFLAGS) -o $@
 
 # Compilation rules for *.c files (Test Build)
 $(TEST_OBJ_DIR)/%.c.o: src/%.c GNUmakefile
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dir $@)"
 	$(KCC) $(TEST_CFLAGS) $(KCPPFLAGS) -c $< -o $@
 
 # Compilation rules for *.S files (Test Build)
 $(TEST_OBJ_DIR)/%.S.o: src/%.S GNUmakefile
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dir $@)"
 	$(KCC) $(TEST_CFLAGS) $(KCPPFLAGS) -c $< -o $@
 
 ifeq ($(KARCH),x86_64)
 # Compilation rules for *.asm (nasm) files (Test Build)
 $(TEST_OBJ_DIR)/%.asm.o: src/%.asm GNUmakefile
-	mkdir -p "$$(dirname $@)"
+	mkdir -p "$(dir $@)"
 	nasm $(KNASMFLAGS) $< -o $@
 endif
 

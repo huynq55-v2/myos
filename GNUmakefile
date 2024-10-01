@@ -14,7 +14,7 @@ $(call USER_VARIABLE,QEMUFLAGS,-m 2G)
 override IMAGE_NAME := template-$(KARCH)
 
 .PHONY: all
-all: $(IMAGE_NAME).iso
+all: user_space $(IMAGE_NAME).iso
 
 .PHONY: all-hdd
 all-hdd: $(IMAGE_NAME).hdd
@@ -315,3 +315,8 @@ run-test: test
 		$(QEMUFLAGS)
 
 .PHONY: test run-test
+
+.PHONY: user_space
+
+user_space:
+	$(MAKE) -C user_space KCC=$(KCC) KLD=$(KLD)
