@@ -93,7 +93,7 @@ struct free_block* split_block(int order) {
 void* buddy_alloc(size_t size) {
     spin_lock(&buddy_lock);
     
-    int order = find_order(size);
+    int order = find_order(size + sizeof(struct alloc_header));
     if(order > MAX_ORDER) {
         spin_unlock(&buddy_lock);
         return NULL; // Yêu cầu vượt quá kích thước tối đa
@@ -111,34 +111,45 @@ void* buddy_alloc(size_t size) {
         return NULL; // Không đủ bộ nhớ
     }
     
+    // Thêm metadata trước vùng nhớ được cấp phát
+    struct alloc_header *header = (struct alloc_header *)block;
+    header->order = order;
+    
+    void *user_ptr = (void *)(header + 1); // Trả về địa chỉ sau metadata
+    
     spin_unlock(&buddy_lock);
-    return (void *)block;
+    return user_ptr;
 }
 
-void buddy_free(void *ptr, size_t size) {
+void buddy_free(void *ptr) {
+    if (ptr == NULL)
+        return;
+
     spin_lock(&buddy_lock);
 
-    int order = find_order(size) - MIN_ORDER;
-    if (order < 0 || order > (MAX_ORDER - MIN_ORDER)) {
+    // Truy cập vào metadata trước vùng nhớ
+    struct alloc_header *header = ((struct alloc_header *)ptr) - 1;
+    int order = header->order;
+
+    if (order < MIN_ORDER || order > MAX_ORDER) {
         // Invalid free
         spin_unlock(&buddy_lock);
         return;
     }
 
-    struct free_block *block = (struct free_block *)ptr;
-    uintptr_t block_addr = (uintptr_t)block - hhdm_offset; // Physical address
+    uintptr_t block_addr = (uintptr_t)header - hhdm_offset; // Địa chỉ vật lý
 
     while (order < (MAX_ORDER - MIN_ORDER)) {
         size_t block_size = 1UL << (order + MIN_ORDER);
         uintptr_t buddy_addr = block_addr ^ block_size;
         struct free_block *buddy = (struct free_block *)(buddy_addr + hhdm_offset);
 
-        // Search for buddy in free list
-        struct free_block **current = &free_lists[order];
+        // Tìm buddy trong danh sách free
+        struct free_block **current = &free_lists[order - MIN_ORDER];
         bool buddy_found = false;
         while (*current) {
             if (*current == buddy) {
-                // Remove buddy from free list
+                // Loại bỏ buddy khỏi danh sách free
                 *current = buddy->next;
                 buddy_found = true;
                 break;
@@ -149,17 +160,17 @@ void buddy_free(void *ptr, size_t size) {
         if (!buddy_found)
             break;
 
-        // Merge buddies
+        // Kết hợp buddies
         if (block_addr > buddy_addr)
             block_addr = buddy_addr;
 
         order++;
     }
 
-    // Add the merged block to the free list
-    block = (struct free_block *)(block_addr + hhdm_offset);
-    block->next = free_lists[order];
-    free_lists[order] = block;
+    // Thêm khối đã kết hợp vào danh sách free
+    struct free_block *block = (struct free_block *)(block_addr + hhdm_offset);
+    block->next = free_lists[order - MIN_ORDER];
+    free_lists[order - MIN_ORDER] = block;
 
     spin_unlock(&buddy_lock);
 }
