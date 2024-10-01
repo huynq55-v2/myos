@@ -12,6 +12,7 @@ PHDRS
     text    PT_LOAD;
     rodata  PT_LOAD;
     data    PT_LOAD;
+    user_program PT_LOAD;
 }
 
 SECTIONS
@@ -45,6 +46,14 @@ SECTIONS
         KEEP(*(.requests))
         KEEP(*(.requests_end_marker))
     } :data
+
+    /* Embed the user program in a separate section */
+    .user_program : {
+        __hello_user_elf_start = .;
+        KEEP(*(.rodata.user_program))
+        KEEP(*(.data.user_program))
+        __hello_user_elf_end = .;
+    } :user_program
 
     /* NOTE: .bss needs to be the last thing mapped to :data, otherwise lots of */
     /* unnecessary zeros will be written to the binary. */
