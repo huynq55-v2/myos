@@ -152,11 +152,8 @@ override KLDFLAGS += \
 # Đường dẫn đến file hello_user.elf
 HELLO_USER_ELF = ../user_space/src/hello_user.elf
 
-# File object tương ứng
+# Đường dẫn đến file hello_user.o
 HELLO_USER_OBJ = obj-$(KARCH)/hello_user.o
-
-# Thêm hello_user.o vào danh sách các object files
-override OBJ += $(HELLO_USER_OBJ)
 
 # Use "find" to glob all *.c, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
@@ -169,18 +166,23 @@ override OBJ := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o))
 ifeq ($(KARCH),x86_64)
 override OBJ += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm=.asm.o))
 endif
-override HEADER_DEPS := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
+
+# Thêm hello_user.o vào danh sách các object files
+override OBJ += $(HELLO_USER_OBJ)
+
+override HEADER_DEPS := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S:.S.d))
 ifeq ($(KARCH),x86_64)
-override HEADER_DEPS += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm=.asm.d))
+override HEADER_DEPS += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm:.asm.d))
 endif
 
-# Quy tắc để tạo hello_user.o từ hello_user.elf
+# Quy tắc để build hello_user.o từ hello_user.elf
 $(HELLO_USER_OBJ): $(HELLO_USER_ELF)
 	@echo "Building hello_user.o from hello_user.elf"
-	mkdir -p obj-$(KARCH)
-	$(KLD) -r -b binary $(HELLO_USER_ELF) -o $(HELLO_USER_OBJ)
+	mkdir -p $(dir $@)
+	$(KLD) -r -b binary $(HELLO_USER_ELF) -o obj-$(KARCH)/hello_user.o
+	x86_64-elf-objcopy --rename-section .data=.user_program obj-$(KARCH)/hello_user.o
 
-# Dependency để build hello_user.elf nếu chưa có
+# Quy tắc để build hello_user.elf nếu chưa có
 $(HELLO_USER_ELF):
 	@echo "Building hello_user.elf"
 	$(MAKE) -C ../user_space
