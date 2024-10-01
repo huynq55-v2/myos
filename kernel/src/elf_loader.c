@@ -1,65 +1,78 @@
 // elf_loader.c
+
+#include "elf_loader.h"
 #include "elf.h"
 #include "buddy.h"
 #include "klibc.h"
 #include "process.h"
 #include "graphics.h"
 
-// Function to load an ELF binary into memory
-bool load_elf(const uint8_t *elf_data, size_t size, process_t *proc) {
-    if (size < sizeof(Elf64_Ehdr)) {
+// Hàm để tải ELF vào bộ nhớ
+bool load_elf(const uint8_t *elf_data, size_t size, process_t *proc)
+{
+    if (size < sizeof(Elf64_Ehdr))
+    {
         kprintf("ELF: File too small\n");
         return false;
     }
 
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf_data;
 
-    // Validate ELF magic number
-    if (ehdr->e_ident[0] != 0x7F || 
-        ehdr->e_ident[1] != 'E' || 
-        ehdr->e_ident[2] != 'L' || 
-        ehdr->e_ident[3] != 'F') {
+    // Kiểm tra magic number của ELF
+    if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0)
+    {
         kprintf("ELF: Invalid magic number\n");
         return false;
     }
 
-    // Only support 64-bit ELF
-    if (ehdr->e_ident[4] != 2) {
+    // Chỉ hỗ trợ ELF 64-bit
+    if (ehdr->e_ident[EI_CLASS] != ELFCLASS64)
+    {
         kprintf("ELF: Unsupported ELF class\n");
         return false;
     }
 
-    // Only support little endian
-    if (ehdr->e_ident[5] != 1) {
+    // Chỉ hỗ trợ little endian
+    if (ehdr->e_ident[EI_DATA] != ELFDATA2LSB)
+    {
         kprintf("ELF: Unsupported endianness\n");
         return false;
     }
 
-    // Locate program headers
+    // Duyệt qua các program header
     Elf64_Phdr *phdr = (Elf64_Phdr *)(elf_data + ehdr->e_phoff);
-    for (int i = 0; i < ehdr->e_phnum; i++) {
-        if (phdr[i].p_type != PT_LOAD)
+    for (int i = 0; i < ehdr->e_phnum; i++)
+    {
+        Elf64_Phdr *ph = &phdr[i];
+
+        if (ph->p_type != PT_LOAD)
             continue;
 
-        // Allocate memory for the segment
-        void *segment = buddy_alloc(phdr[i].p_memsz);
-        if (!segment) {
-            kprintf("ELF: Failed to allocate memory for segment\n");
+        // Địa chỉ ảo nơi segment sẽ được nạp
+        void *segment_virtual_addr = (void *)(ph->p_vaddr);
+
+        // Kích thước cần cấp phát
+        size_t memsz = ph->p_memsz;
+
+        // Cấp phát bộ nhớ cho segment (cần triển khai hàm map_memory)
+        if (!map_memory(proc->page_table, (uintptr_t)segment_virtual_addr, memsz, ph->p_flags))
+        {
+            kprintf("ELF: Failed to map memory for segment\n");
             return false;
         }
 
-        // Copy segment data from ELF file
-        memcpy(segment, elf_data + phdr[i].p_offset, phdr[i].p_filesz);
+        // Sao chép dữ liệu từ ELF vào bộ nhớ đã cấp phát
+        memcpy(segment_virtual_addr, elf_data + ph->p_offset, ph->p_filesz);
 
-        // Zero out the remaining memory if p_memsz > p_filesz
-        if (phdr[i].p_memsz > phdr[i].p_filesz) {
-            memset(segment + phdr[i].p_filesz, 0, phdr[i].p_memsz - phdr[i].p_filesz);
+        // Nếu p_memsz > p_filesz, điền zero vào phần còn lại
+        if (ph->p_memsz > ph->p_filesz)
+        {
+            memset((uint8_t *)segment_virtual_addr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
         }
-
-        // Update process's memory map
-        proc->entry_point = ehdr->e_entry;
-        // Additional mappings can be handled here (e.g., virtual memory setup)
     }
+
+    // Thiết lập điểm bắt đầu cho tiến trình
+    proc->entry_point = ehdr->e_entry;
 
     return true;
 }

@@ -4,6 +4,14 @@
 
 #include <stdint.h>
 
+// Các định nghĩa liên quan đến ELF
+#define ELFMAG      "\177ELF"
+#define SELFMAG     4
+#define EI_CLASS    4
+#define EI_DATA     5
+#define ELFCLASS64  2
+#define ELFDATA2LSB 1
+
 // ELF Header
 typedef struct {
     unsigned char e_ident[16];

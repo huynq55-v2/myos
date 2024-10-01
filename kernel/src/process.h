@@ -1,4 +1,5 @@
 // process.h
+
 #ifndef PROCESS_H
 #define PROCESS_H
 
@@ -18,22 +19,23 @@ typedef struct process {
     uint64_t entry_point;
     process_state_t state;
     struct process *next;
-    // Additional fields can be added (e.g., registers, memory maps)
+    void *page_table; // Con trỏ tới bảng trang của tiến trình
+    // Thêm các trường cần thiết khác (ví dụ: CPU state)
 } process_t;
 
-// Initialize process management
+// Khởi tạo quản lý tiến trình
 void process_init();
 
-// Create a new process from an ELF binary
+// Tạo tiến trình mới từ ELF
 process_t* process_create(const uint8_t *elf_data, size_t size);
 
-// Schedule the next process to run
+// Lịch trình tiến trình tiếp theo
 void schedule();
 
-// Get the current running process
+// Tiến trình hiện tại
 process_t* current_process();
 
-// Terminate the current process
+// Kết thúc tiến trình hiện tại
 void process_terminate();
 
 #endif // PROCESS_H
