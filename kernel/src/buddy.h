@@ -1,19 +1,12 @@
 #ifndef BUDDY_H
 #define BUDDY_H
 
-#include <stddef.h>
-#include <stdint.h>
-#include "limine.h" // Include limine.h for memory map structures
+#define MIN_ORDER 12 // 4KB
+#define MAX_ORDER 20 // 1MB
+#define PAGE_SIZE 4096 // 4KB
 
-// Initialize the buddy allocator with the memory map response from Limine
-void buddy_init(struct limine_memmap_response *memmap_response);
-
-// Allocate memory of the given size (in bytes)
-void *buddy_alloc(size_t size);
-
-// Free the previously allocated memory pointed to by ptr
-void buddy_free(void *ptr);
-
-extern uintptr_t hhdm_offset;
+struct free_block {
+    struct free_block *next;
+};
 
 #endif // BUDDY_H
