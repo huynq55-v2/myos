@@ -2,7 +2,8 @@
 #include <stddef.h>
 #include "limine.h"
 #include <stdbool.h>
-#include <spinlock.h>
+#include "spinlock.h"
+#include "paging.h"
 
 struct free_block *free_lists[MAX_ORDER - MIN_ORDER + 1];
 
@@ -115,7 +116,8 @@ void* buddy_alloc(size_t size) {
     struct alloc_header *header = (struct alloc_header *)block;
     header->order = order;
     
-    void *user_ptr = (void *)(header + 1); // Trả về địa chỉ sau metadata
+    // Trả về địa chỉ bắt đầu của khối bộ nhớ được cấp phát (đã được canh chỉnh)
+    void *user_ptr = (void *)block;
     
     spin_unlock(&buddy_lock);
     return user_ptr;
@@ -127,8 +129,8 @@ void buddy_free(void *ptr) {
 
     spin_lock(&buddy_lock);
 
-    // Truy cập vào metadata trước vùng nhớ
-    struct alloc_header *header = ((struct alloc_header *)ptr) - 1;
+    // Truy cập vào metadata trong khối bộ nhớ được cấp phát
+    struct alloc_header *header = (struct alloc_header *)ptr; // Vì user_ptr = block
     int order = header->order;
 
     if (order < MIN_ORDER || order > MAX_ORDER) {
@@ -137,7 +139,7 @@ void buddy_free(void *ptr) {
         return;
     }
 
-    uintptr_t block_addr = (uintptr_t)header - hhdm_offset; // Địa chỉ vật lý
+    uintptr_t block_addr = virt_to_phys((uintptr_t)header); // Chuyển đổi địa chỉ ảo sang vật lý
 
     while (order < (MAX_ORDER - MIN_ORDER)) {
         size_t block_size = 1UL << (order + MIN_ORDER);
