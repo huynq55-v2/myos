@@ -92,6 +92,13 @@ void *create_user_page_table()
 // parameters: PML4, virtual address, physical address, number of bytes, flags
 bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t size, uint64_t flags)
 {
+    // check if virtual address and physical address are aligned
+    if (virt_addr % PAGE_SIZE != 0 || phys_addr % PAGE_SIZE != 0)
+    {
+        kprintf("Paging: Virtual and physical addresses must be aligned\n");
+        return false;
+    }
+
     // calculate number of pages to map
     uint64_t num_pages = size / PAGE_SIZE;
     if (size % PAGE_SIZE != 0)
