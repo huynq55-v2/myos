@@ -1,13 +1,12 @@
 #include "bitmap_allocator.h"
 
 // Initializes the allocator
-void bitmap_allocator_init(bitmap_allocator_t *allocator, uint8_t *bitmap_memory, uint64_t total_memory_size) {
+void bitmap_allocator_init(bitmap_allocator_t *allocator, uint8_t *bitmap_memory, uint64_t bitmap_memory_size) {
     allocator->bitmap = bitmap_memory;
-    allocator->size = total_memory_size * 8; // Number of bits
-    allocator->total_blocks = allocator->size; // Each bit represents one block
+    allocator->total_blocks = bitmap_memory_size * 8; // Number of bits
 
     // Initialize bitmap to 0 (all blocks free)
-    for (uint64_t i = 0; i < total_memory_size; i++) {
+    for (uint64_t i = 0; i < bitmap_memory_size; i++) {
         allocator->bitmap[i] = 0;
     }
 }
@@ -16,15 +15,12 @@ void bitmap_allocator_init(bitmap_allocator_t *allocator, uint8_t *bitmap_memory
 /**
  * Allocates a single block. Returns block index or (uint64_t)-1 on failure.
  *
- * The function iterates over the bitmap and finds the first free block.
- * If no free block is found, it returns (uint64_t)-1.
- *
- * @param allocator The allocator from which to allocate the block.
- *
- * @returns The index of the allocated block or (uint64_t)-1 on failure.
+ * The function iterates through the bitmap and checks for the first free block.
+ * If a free block is found, it is marked as allocated and the index is returned.
+ * If no free blocks are found, the function returns (uint64_t)-1.
  */
 uint64_t bitmap_alloc(bitmap_allocator_t *allocator) {
-    for (uint64_t byte = 0; byte < allocator->size / 8; byte++) {
+    for (uint64_t byte = 0; byte < allocator->total_blocks / 8; byte++) {
         if (allocator->bitmap[byte] != 0xFF) { // Not all bits are set
             for (uint8_t bit = 0; bit < 8; bit++) {
                 if (!(allocator->bitmap[byte] & (1 << bit))) {

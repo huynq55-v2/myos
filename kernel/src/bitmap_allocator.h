@@ -10,7 +10,6 @@
 // Bitmap Allocator structure
 typedef struct {
     uint8_t *bitmap;        // Pointer to the bitmap
-    uint64_t size;          // Number of bits in the bitmap
     uint64_t total_blocks;  // Total number of blocks managed
 } bitmap_allocator_t;
 
