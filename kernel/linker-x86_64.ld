@@ -1,72 +1,45 @@
-/* Tell the linker that we want an x86_64 ELF64 output file */
-OUTPUT_FORMAT(elf64-x86-64)
+/* linker.ld */
 
-/* We want the symbol kmain to be our entry point */
+OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(kmain)
 
-/* Define the program headers we want so the bootloader gives us the right */
-/* MMU permissions; this also allows us to exert more control over the linking */
-/* process. */
-PHDRS
-{
-    text    PT_LOAD;
-    rodata  PT_LOAD;
-    data    PT_LOAD;
-    user_program PT_LOAD;
-}
+/* Định nghĩa địa chỉ ảo và vật lý */
+KERNEL_VMA = 0xFFFFFFFF80000000; /* Địa chỉ ảo nơi kernel được liên kết */
+KERNEL_LMA = 0x100000;           /* Địa chỉ vật lý nơi kernel được nạp */
 
 SECTIONS
 {
-    /* We want to be placed in the topmost 2GiB of the address space, for optimisations */
-    /* and because that is what the Limine spec mandates. */
-    /* Any address in this region will do, but often 0xffffffff80000000 is chosen as */
-    /* that is the beginning of the region. */
-    . = 0xffffffff80000000;
+    /* Phần .text của kernel */
+    .text KERNEL_VMA : AT(KERNEL_LMA) {
+        _kernel_start = .;          /* Đánh dấu bắt đầu của phần .text */
+        *(.multiboot_header)
+        *(.text*)
+        *(.rodata*)
+        _kernel_end = .;            /* Đánh dấu kết thúc của phần .text */
+    }
 
-    .text : {
-        *(.text .text.*)
-    } :text
+    /* Phần .data của kernel */
+    .data : AT(KERNEL_LMA + (ADDR(.data) - KERNEL_VMA)) {
+        *(.data*)
+    }
 
-    /* Move to the next memory page for .rodata */
-    . = ALIGN(CONSTANT(MAXPAGESIZE));
-
-    .rodata : {
-        *(.rodata .rodata.*)
-    } :rodata
-
-    /* Move to the next memory page for .data */
-    . = ALIGN(CONSTANT(MAXPAGESIZE));
-
-    .data : {
-        *(.data .data.*)
-
-        /* Place the sections that contain the Limine requests as part of the .data */
-        /* output section. */
-        KEEP(*(.requests_start_marker))
-        KEEP(*(.requests))
-        KEEP(*(.requests_end_marker))
-    } :data
-
-    /* Embed the user program in a separate section */
-    .user_program : {
-        __hello_user_elf_start = .;
-        KEEP(*(.rodata.user_program))
-        KEEP(*(.data.user_program))
-        __hello_user_elf_end = .;
-    } :user_program
-
-    /* NOTE: .bss needs to be the last thing mapped to :data, otherwise lots of */
-    /* unnecessary zeros will be written to the binary. */
-    /* If you need, for example, .init_array and .fini_array, those should be placed */
-    /* above this. */
-    .bss : {
-        *(.bss .bss.*)
+    /* Phần .bss của kernel */
+    .bss : AT(KERNEL_LMA + (ADDR(.bss) - KERNEL_VMA)) {
+        __bss_start = .;
+        *(.bss*)
         *(COMMON)
-    } :data
+        __bss_end = .;
+    }
 
-    /* Discard .note.* and .eh_frame* since they may cause issues on some hosts. */
+    /* Bao gồm ELF của chương trình người dùng */
+    .user_program : AT(KERNEL_LMA + (ADDR(.user_program) - KERNEL_VMA)) ALIGN(0x1000) {
+        hello_user_elf_start = .;
+        KEEP(*(.user_program))
+        hello_user_elf_end = .;
+    }
+
     /DISCARD/ : {
-        *(.eh_frame*)
-        *(.note .note.*)
+        *(.eh_frame)
+        *(.comment)
     }
 }
