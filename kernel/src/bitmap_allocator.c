@@ -4,7 +4,7 @@
 void bitmap_allocator_init(bitmap_allocator_t *allocator, uint8_t *bitmap_memory, uint64_t total_memory_size) {
     allocator->bitmap = bitmap_memory;
     allocator->size = total_memory_size * 8; // Number of bits
-    allocator->total_blocks = allocator->size / BLOCK_SIZE;
+    allocator->total_blocks = allocator->size; // Each bit represents one block
 
     // Initialize bitmap to 0 (all blocks free)
     for (uint64_t i = 0; i < total_memory_size; i++) {
@@ -12,7 +12,8 @@ void bitmap_allocator_init(bitmap_allocator_t *allocator, uint8_t *bitmap_memory
     }
 }
 
-// Allocates a single block
+// Allocates a single block from allocator
+// returns block index or (uint64_t)-1 on failure
 uint64_t bitmap_alloc(bitmap_allocator_t *allocator) {
     for (uint64_t byte = 0; byte < allocator->size / 8; byte++) {
         if (allocator->bitmap[byte] != 0xFF) { // Not all bits are set
@@ -33,21 +34,24 @@ uint64_t bitmap_alloc(bitmap_allocator_t *allocator) {
 
 // Frees a single block
 void bitmap_free(bitmap_allocator_t *allocator, uint64_t block_index) {
+    if (block_index >= allocator->total_blocks) {
+        return; // Invalid block index
+    }
+
     uint64_t byte = block_index / 8;
     uint8_t bit = block_index % 8;
-    if (byte < allocator->size / 8) {
-        allocator->bitmap[byte] &= ~(1 << bit);
-    }
+    allocator->bitmap[byte] &= ~(1 << bit);
 }
 
 // Checks if a block is allocated
 int bitmap_is_allocated(bitmap_allocator_t *allocator, uint64_t block_index) {
+    if (block_index >= allocator->total_blocks) {
+        return 0;
+    }
+
     uint64_t byte = block_index / 8;
     uint8_t bit = block_index % 8;
-    if (byte < allocator->size / 8) {
-        return (allocator->bitmap[byte] & (1 << bit)) != 0;
-    }
-    return 0;
+    return (allocator->bitmap[byte] & (1 << bit)) != 0;
 }
 
 // Allocates 'count' contiguous blocks
