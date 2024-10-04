@@ -120,7 +120,7 @@ bool map_memory(uintptr_t pml4_phys, uint64_t virt_addr, uint64_t phys_addr, uin
         uint64_t pd_index = virt_page >> 21 & 0x1FF;
         uint64_t pt_index = virt_page >> 12 & 0x1FF;
 
-        uint64_t *pml4_virtual = PHYS_TO_VIRT((uintptr_t)pml4);
+        uint64_t *pml4_virtual = PHYS_TO_VIRT((uintptr_t)pml4_phys);
 
         if (!(pml4_virtual[pml4_index] & PAGING_PAGE_PRESENT))
         {
