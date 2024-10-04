@@ -4,6 +4,7 @@
 #include "memory_manager.h"
 #include "klibc.h"
 #include "graphics.h"
+#include "config.h"
 
 // Cấu trúc ELF header cho 64-bit
 typedef struct {

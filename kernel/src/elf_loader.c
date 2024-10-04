@@ -51,17 +51,17 @@ bool elf_load(uint64_t page_table_phys, uint8_t *elf_start, uint8_t *elf_end) {
         return false;
     }
 
-    // Kiểm tra phiên bản
-    if (ehdr->e_ident[4] != 1) { // EV_CURRENT
-        kprintf("ELF Loader: Unsupported ELF version\n");
-        return false;
-    }
+    // // Kiểm tra phiên bản
+    // if (ehdr->e_ident[4] != 1) { // EV_CURRENT
+    //     kprintf("ELF Loader: Unsupported ELF version\n");
+    //     return false;
+    // }
 
-    // Kiểm tra loại
-    if (ehdr->e_type != 2) { // ET_EXEC
-        kprintf("ELF Loader: Unsupported ELF type\n");
-        return false;
-    }
+    // // Kiểm tra loại
+    // if (ehdr->e_type != 2) { // ET_EXEC
+    //     kprintf("ELF Loader: Unsupported ELF type\n");
+    //     return false;
+    // }
 
     // Lấy program headers
     Elf64_Phdr *phdr = (Elf64_Phdr*)(elf_start + ehdr->e_phoff);
@@ -89,11 +89,11 @@ bool elf_load(uint64_t page_table_phys, uint8_t *elf_start, uint8_t *elf_end) {
             }
 
             // Sao chép dữ liệu từ ELF vào bộ nhớ
-            memcpy((void*)vaddr, elf_start + offset, filesz);
+            memcpy(PHYS_TO_VIRT(phys_addr), elf_start + offset, filesz);
 
             // Nếu p_memsz > p_filesz, cần zero phần còn lại
             if (memsz > filesz) {
-                memset((void*)(vaddr + filesz), 0, memsz - filesz);
+                memset(PHYS_TO_VIRT(phys_addr + filesz), 0, memsz - filesz);
             }
 
             // Cập nhật entry point nếu cần

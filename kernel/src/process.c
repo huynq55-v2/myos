@@ -60,6 +60,9 @@ process_t* process_create(uint8_t *elf_start, uint8_t *elf_end) {
         kprintf("Process Manager: Failed to allocate memory for process\n");
         return NULL;
     }
+    // convert proc to virtual address
+    proc = (process_t*)PHYS_TO_VIRT((uintptr_t)proc);
+
     memset(proc, 0, sizeof(process_t));
 
     proc->pid = current_pid++;
