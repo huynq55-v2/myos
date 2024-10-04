@@ -92,7 +92,7 @@ void *create_user_page_table()
  *
  * @return true if the mapping was successful, and false otherwise.
  */
-bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t size, uint64_t flags)
+bool map_memory(uintptr_t pml4_phys, uint64_t virt_addr, uint64_t phys_addr, uint64_t size, uint64_t flags)
 {
     // check if virtual address and physical address are aligned
     if (virt_addr % PAGE_SIZE != 0 || phys_addr % PAGE_SIZE != 0)
@@ -183,6 +183,9 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
         }
         // set pt entry
         pt[pt_index] = phys_page & 0xFFFFFFFFFFFFF000 | flags | PAGING_PAGE_PRESENT;
+
+        // Invalidate TLB for the mapped page
+        __asm__ volatile("invlpg (%0)" : : "r" (virt_page) : "memory");
     }
     return true;
 }
