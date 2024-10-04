@@ -8,6 +8,7 @@
 #include "gdt.h"
 #include "tss.h"
 #include "memory_manager.h"
+#include "process.h"
 
 #ifdef TEST
 void run_all_tests();
@@ -90,6 +91,19 @@ void kmain(void)
     run_all_tests();
     hcf();
 #else
+
+    // Khởi tạo quản lý tiến trình
+    process_manager_init();
+
+    // Tạo tiến trình đầu tiên từ ELF binary
+    process_t *proc = process_create(hello_user_elf_start, hello_user_elf_end);
+    if (!proc) {
+        kprintf("kmain: Failed to create initial process\n");
+        hcf();
+    }
+
+    // Chạy tiến trình đầu tiên
+    process_run();
 
     // We're done, just hang...
     hcf();
