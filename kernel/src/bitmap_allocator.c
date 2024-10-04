@@ -11,7 +11,6 @@ void bitmap_allocator_init(bitmap_allocator_t *allocator, uint8_t *bitmap_memory
     }
 }
 
-
 /**
  * Allocates a single block. Returns block index or (uint64_t)-1 on failure.
  *

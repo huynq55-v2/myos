@@ -28,6 +28,12 @@
         "gdt.h": "c",
         "stacks.h": "c",
         "functional": "c",
-        "graphics.h": "c"
+        "graphics.h": "c",
+        "process.h": "c",
+        "spinlock.h": "c",
+        "memory_manager.h": "c",
+        "context_switch.h": "c",
+        "compare": "cpp",
+        "config.h": "c"
     }
 }

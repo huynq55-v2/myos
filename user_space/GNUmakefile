@@ -4,7 +4,7 @@
 OBJ_OUTPUT_DIR ?= build
 
 # Đường dẫn đến file linker script
-LINKER_SCRIPT ?= src/linker_user.ld
+LINKER_SCRIPT ?= user_linker.ld
 
 # Danh sách tất cả các file .c trong thư mục src
 SRC_FILES := $(wildcard src/*.c)

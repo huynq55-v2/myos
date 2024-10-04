@@ -7,7 +7,8 @@
 #include "idt.h"
 #include "gdt.h"
 #include "tss.h"
-#include "buddy.h"
+#include "memory_manager.h"
+#include "process.h"
 
 #ifdef TEST
 void run_all_tests();
@@ -27,12 +28,6 @@ __attribute__((used, section(".requests"))) static volatile LIMINE_BASE_REVISION
 __attribute__((used, section(".requests"))) static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0};
-
-// Thêm yêu cầu HHDM
-__attribute__((used, section(".requests"))) volatile struct limine_hhdm_request hhdm_request = {
-    .id = LIMINE_HHDM_REQUEST,
-    .revision = 0
-};
 
 // Thêm yêu cầu MEMMAP
 __attribute__((used, section(".requests"))) volatile struct limine_memmap_request memmap_request = {
@@ -62,7 +57,8 @@ static void hcf(void)
     }
 }
 
-uintptr_t hhdm_offset;
+extern uint8_t hello_user_elf_start[];
+extern uint8_t hello_user_elf_end[];
 
 // The following will be our kernel's entry point.
 // If renaming kmain() to something else, make sure to change the
@@ -89,38 +85,12 @@ void kmain(void)
     init_gdt();
     idt_init(); // Nạp IDT
 
-    hhdm_offset = hhdm_request.response->offset;
-
-    buddy_init();
-
-    
+    memory_manager_init();
 
 #ifdef TEST
     run_all_tests();
     hcf();
 #else
-
-    // __asm__ __volatile__("int3"); // test trigger breakpoint
-
-    // Sử dụng hàm kprintf để in ra giá trị
-    kprintf("Hello, World!\n");
-    kprintf("3 + 4 == %d\n", 7);
-    kprintf("Hex: %x\n", 255);
-    kprintf("String: %s\n", "Chuoi ky tu");
-
-    // Kích hoạt ngoại lệ chia cho 0 bằng assembly
-    // __asm__ __volatile__(
-    //     "movq $1, %rax\n\t"
-    //     "movq $0, %rbx\n\t"
-    //     "divq %rbx\n\t" // Thực hiện phép chia cho 0
-    // );
-
-    // double fault
-    // __asm__ __volatile__(
-    //     "cli;"           // Tắt ngắt
-    //     "movq $0, %rsp;" // Thiết lập stack pointer về 0 (stack không hợp lệ)
-    //     "iretq;"         // Thực hiện lệnh iret với stack không hợp lệ -> gây ra double fault
-    // );
 
     // We're done, just hang...
     hcf();

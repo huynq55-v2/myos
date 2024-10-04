@@ -31,7 +31,7 @@ $(call USER_VARIABLE,KCC,clang)
 $(call USER_VARIABLE,KLD,ld.lld)
 
 # User controllable C flags.
-$(call USER_VARIABLE,KCFLAGS,-g -O2 -pipe)
+$(call USER_VARIABLE,KCFLAGS,-g -O0 -pipe)
 
 # User controllable C preprocessor flags. We set none by default.
 $(call USER_VARIABLE,KCPPFLAGS,)

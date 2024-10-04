@@ -13,9 +13,15 @@
 #define PD_INDEX(x)   (((x) >> 21) & 0x1FF)
 #define PT_INDEX(x)   (((x) >> 12) & 0x1FF)
 
-#define PAGE_READ  0x1
-#define PAGE_WRITE 0x2
-#define PAGE_EXEC  0x4
+// Các hằng số cờ phân trang
+#define PAGE_PRESENT    0x1     // Trang hiện tại
+#define PAGE_RW         0x2     // Trang có thể đọc/ghi
+#define PAGE_USER       0x4     // Trang có thể truy cập ở chế độ người dùng
+
+// Hằng số phân quyền cụ thể
+#define PAGE_READ       0x1     // Có thể đọc
+#define PAGE_WRITE      0x2     // Có thể ghi
+#define PAGE_EXECUTE    0x4     // Có thể thực thi
 
 // Tạo bảng trang cho tiến trình người dùng
 void* create_user_page_table();
