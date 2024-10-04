@@ -6,16 +6,27 @@
 #include "graphics.h"
 #include "config.h"
 
-#define PAGE_SIZE 4096
-
 #define ALIGN_UP(x, align) (((x) + ((align) - 1)) & ~((align) - 1))
 
-// Hàm để lấy địa chỉ vật lý từ một entry bảng phân trang
+#define PML4_INDEX(x) (((x) >> 39) & 0x1FF)
+#define PDPT_INDEX(x) (((x) >> 30) & 0x1FF)
+#define PD_INDEX(x)   (((x) >> 21) & 0x1FF)
+#define PT_INDEX(x)   (((x) >> 12) & 0x1FF)
+
+
+/**
+ * Gets the physical address from a page table entry.
+ *
+ * The function takes a page table entry as an argument and returns the physical
+ * address represented by the entry. The physical address is extracted from the
+ * lower 40 bits of the page table entry.
+ *
+ * @param entry The page table entry to get the physical address from.
+ */
 uintptr_t get_physical_address(uint64_t entry)
 {
     return entry & 0x000FFFFFFFFFF000;
 }
-
 
 /**
  * Converts a physical address to a page table entry.
@@ -32,16 +43,20 @@ uintptr_t get_physical_address(uint64_t entry)
  */
 static uint64_t convert_physical_address_to_page_table_entry(uintptr_t physical_address)
 {
-    // Chỉ thêm các cờ điều khiển vào, không thay đổi các bit của địa chỉ vật lý
-    return physical_address | PAGE_PRESENT;  // thêm các cờ khác nếu cần, như PAGE_RW
+    return physical_address | PAGING_PAGE_PRESENT;
 }
 
-// Hàm để chuyển đổi chỉ số sang địa chỉ bảng phân trang
-static uint64_t *get_table_entry(void *page_table, size_t index)
-{
-    return (uint64_t *)page_table + index;
-}
-
+/*************  ✨ Codeium Command ⭐  *************/
+/**
+ * Reads the current value of CR3.
+ *
+ * This function reads the current value of the CR3 register and returns it as a
+ * uintptr_t. The CR3 register contains the physical address of the base of the
+ * page directory associated with the current process.
+ *
+ * @return The physical address of the page directory base.
+ */
+/******  222c14c3-ea9e-49fa-b9c5-6ca2f11eda02  *******/
 static inline uintptr_t read_cr3()
 {
     uintptr_t cr3;
@@ -49,6 +64,8 @@ static inline uintptr_t read_cr3()
     return cr3;
 }
 
+// Switches the current page table.
+// page_table is virtual address
 void switch_page_table(void *page_table)
 {
     uintptr_t phys_pml4 = VIRT_TO_PHYS(page_table);
@@ -140,7 +157,7 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
 
         uint64_t *pml4_virtual = PHYS_TO_VIRT((uintptr_t)pml4);
 
-        if (!(pml4_virtual[pml4_index] & PAGE_PRESENT))
+        if (!(pml4_virtual[pml4_index] & PAGING_PAGE_PRESENT))
         {
             // allocate pdpt entry
             uint64_t pdpt = allocate_physical_block();
@@ -152,13 +169,13 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pdpt entry
             memset(PHYS_TO_VIRT(pdpt), 0, 4096);
             // set pdpt entry
-            pml4_virtual[pml4_index] = convert_physical_address_to_page_table_entry(pdpt) | PAGE_PRESENT;
+            pml4_virtual[pml4_index] = convert_physical_address_to_page_table_entry(pdpt) | PAGING_PAGE_PRESENT;
         }
 
         // get pdpt virtual address
         uint64_t *pdpt = PHYS_TO_VIRT(get_physical_address(pml4_virtual[pml4_index]));
         // check if pd entry is present
-        if (!(pdpt[pdpt_index] & PAGE_PRESENT))
+        if (!(pdpt[pdpt_index] & PAGING_PAGE_PRESENT))
         {
             // allocate pd entry
             uint64_t pd = allocate_physical_block();
@@ -170,13 +187,13 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pd entry
             memset(PHYS_TO_VIRT(pd), 0, 4096);
             // set pd entry
-            pdpt[pdpt_index] = convert_physical_address_to_page_table_entry(pd) | PAGE_PRESENT;
+            pdpt[pdpt_index] = convert_physical_address_to_page_table_entry(pd) | PAGING_PAGE_PRESENT;
         }
 
         // get pd virtual address
         uint64_t *pd = PHYS_TO_VIRT(get_physical_address(pdpt[pdpt_index]));
         // check if pt entry is present
-        if (!(pd[pd_index] & PAGE_PRESENT))
+        if (!(pd[pd_index] & PAGING_PAGE_PRESENT))
         {
             // allocate pt entry
             uint64_t pt = allocate_physical_block();
@@ -188,13 +205,13 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pt entry
             memset(PHYS_TO_VIRT(pt), 0, 4096);
             // set pt entry
-            pd[pd_index] = convert_physical_address_to_page_table_entry(pt) | PAGE_PRESENT;
+            pd[pd_index] = convert_physical_address_to_page_table_entry(pt) | PAGING_PAGE_PRESENT;
         }
 
         // get pt virtual address
         uint64_t *pt = PHYS_TO_VIRT(get_physical_address(pd[pd_index]));
         // check if page already mapped
-        if (pt[pt_index] & PAGE_PRESENT)
+        if (pt[pt_index] & PAGING_PAGE_PRESENT)
         {
             kprintf("Paging: Page already mapped\n");
             return false;
@@ -203,70 +220,4 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
         pt[pt_index] = convert_physical_address_to_page_table_entry(phys_page) | flags;
     }
     return true;
-}
-
-// paging.c (tiếp tục)
-
-void destroy_page_table(void *page_table)
-{
-    if (!page_table)
-    {
-        kprintf("Paging: Invalid page table\n");
-        return;
-    }
-
-    uint64_t *pml4 = PHYS_TO_VIRT((uintptr_t)page_table);
-
-    // Lặp qua các entries của PML4
-    for (int i = 0; i < 256; i++)
-    { // Chỉ xét phần lower half (user space)
-        if (pml4[i] & PAGE_PRESENT)
-        {
-            uintptr_t phys_pdpt = get_physical_address(pml4[i]);
-            uint64_t *pdpt = PHYS_TO_VIRT(phys_pdpt);
-
-            // Lặp qua các entries của PDPT
-            for (int j = 0; j < 512; j++)
-            {
-                if (pdpt[j] & PAGE_PRESENT)
-                {
-                    uintptr_t phys_pd = get_physical_address(pdpt[j]);
-                    uint64_t *pd = PHYS_TO_VIRT(phys_pd);
-
-                    // Lặp qua các entries của PD
-                    for (int k = 0; k < 512; k++)
-                    {
-                        if (pd[k] & PAGE_PRESENT)
-                        {
-                            uintptr_t phys_pt = get_physical_address(pd[k]);
-                            uint64_t *pt = PHYS_TO_VIRT(phys_pt);
-
-                            // Lặp qua các entries của PT
-                            for (int l = 0; l < 512; l++)
-                            {
-                                if (pt[l] & PAGE_PRESENT)
-                                {
-                                    uintptr_t phys_page = get_physical_address(pt[l]);
-                                    free_physical_block(phys_page); // Giải phóng trang vật lý
-                                }
-                            }
-
-                            // Giải phóng PT
-                            free_physical_block(phys_pd);
-                        }
-                    }
-
-                    // Giải phóng PDPT
-                    free_physical_block(phys_pdpt);
-                }
-            }
-
-            // Đặt entry trong PML4 thành 0
-            pml4[i] = 0;
-        }
-    }
-
-    // Giải phóng PML4
-    uintptr_t phys_pml4 = VIRT_TO_PHYS(page_table);
-    free_physical_block(phys_pml4);
 }

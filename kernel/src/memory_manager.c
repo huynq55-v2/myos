@@ -1,6 +1,7 @@
 #include "memory_manager.h"
 #include "bitmap_allocator.h"
 #include <limine.h>
+#include "config.h"
 
 // Yêu cầu MEMMAP từ Limine
 extern volatile struct limine_memmap_request memmap_request;

@@ -3,9 +3,6 @@
 
 #include <stdint.h>
 
-// Kích thước của mỗi block (4KB)
-#define BLOCK_SIZE 4096
-
 #include "bitmap_allocator.h"
 
 // Hàm khởi tạo Memory Manager

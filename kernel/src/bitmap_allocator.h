@@ -4,9 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// Size of each block (4KB)
-#define BLOCK_SIZE 4096
-
 // Bitmap Allocator structure
 typedef struct {
     uint8_t *bitmap;        // Pointer to the bitmap
