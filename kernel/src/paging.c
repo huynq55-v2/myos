@@ -13,40 +13,6 @@
 #define PD_INDEX(x)   (((x) >> 21) & 0x1FF)
 #define PT_INDEX(x)   (((x) >> 12) & 0x1FF)
 
-
-/**
- * Gets the physical address from a page table entry.
- *
- * The function takes a page table entry as an argument and returns the physical
- * address represented by the entry. The physical address is extracted from the
- * lower 40 bits of the page table entry.
- *
- * @param entry The page table entry to get the physical address from.
- */
-uintptr_t get_physical_address(uint64_t entry)
-{
-    return entry & 0x000FFFFFFFFFF000;
-}
-
-/**
- * Converts a physical address to a page table entry.
- *
- * The function takes a physical address as an argument and returns a page table
- * entry. The page table entry is a 64-bit value, where the lower 40 bits are the
- * physical address and the upper 24 bits are flags.
- *
- * The flags set by the function are PAGE_PRESENT, and other flags can be added
- * as needed (e.g. PAGE_RW).
- *
- * @param physical_address The physical address to convert.
- * @return A page table entry that can be used to map the physical address.
- */
-static uint64_t convert_physical_address_to_page_table_entry(uintptr_t physical_address)
-{
-    return physical_address | PAGING_PAGE_PRESENT;
-}
-
-/*************  ✨ Codeium Command ⭐  *************/
 /**
  * Reads the current value of CR3.
  *
@@ -56,7 +22,6 @@ static uint64_t convert_physical_address_to_page_table_entry(uintptr_t physical_
  *
  * @return The physical address of the page directory base.
  */
-/******  222c14c3-ea9e-49fa-b9c5-6ca2f11eda02  *******/
 static inline uintptr_t read_cr3()
 {
     uintptr_t cr3;
@@ -169,11 +134,11 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pdpt entry
             memset(PHYS_TO_VIRT(pdpt), 0, 4096);
             // set pdpt entry
-            pml4_virtual[pml4_index] = convert_physical_address_to_page_table_entry(pdpt) | PAGING_PAGE_PRESENT;
+            pml4_virtual[pml4_index] = pdpt & 0xFFFFFFFFFFFFF000 | flags | PAGING_PAGE_PRESENT;
         }
 
         // get pdpt virtual address
-        uint64_t *pdpt = PHYS_TO_VIRT(get_physical_address(pml4_virtual[pml4_index]));
+        uint64_t *pdpt = PHYS_TO_VIRT(pml4_virtual[pml4_index] & 0xFFFFFFFFFFFFF000);
         // check if pd entry is present
         if (!(pdpt[pdpt_index] & PAGING_PAGE_PRESENT))
         {
@@ -187,11 +152,11 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pd entry
             memset(PHYS_TO_VIRT(pd), 0, 4096);
             // set pd entry
-            pdpt[pdpt_index] = convert_physical_address_to_page_table_entry(pd) | PAGING_PAGE_PRESENT;
+            pdpt[pdpt_index] = pd & 0xFFFFFFFFFFFFF000 | flags | PAGING_PAGE_PRESENT;
         }
 
         // get pd virtual address
-        uint64_t *pd = PHYS_TO_VIRT(get_physical_address(pdpt[pdpt_index]));
+        uint64_t *pd = PHYS_TO_VIRT(pdpt[pdpt_index] & 0xFFFFFFFFFFFFF000);
         // check if pt entry is present
         if (!(pd[pd_index] & PAGING_PAGE_PRESENT))
         {
@@ -205,11 +170,11 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pt entry
             memset(PHYS_TO_VIRT(pt), 0, 4096);
             // set pt entry
-            pd[pd_index] = convert_physical_address_to_page_table_entry(pt) | PAGING_PAGE_PRESENT;
+            pd[pd_index] = pt & 0xFFFFFFFFFFFFF000 | flags | PAGING_PAGE_PRESENT;
         }
 
         // get pt virtual address
-        uint64_t *pt = PHYS_TO_VIRT(get_physical_address(pd[pd_index]));
+        uint64_t *pt = PHYS_TO_VIRT(pd[pd_index] & 0xFFFFFFFFFFFFF000);
         // check if page already mapped
         if (pt[pt_index] & PAGING_PAGE_PRESENT)
         {
@@ -217,7 +182,7 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             return false;
         }
         // set pt entry
-        pt[pt_index] = convert_physical_address_to_page_table_entry(phys_page) | flags;
+        pt[pt_index] = phys_page & 0xFFFFFFFFFFFFF000 | flags | PAGING_PAGE_PRESENT;
     }
     return true;
 }
