@@ -16,20 +16,24 @@ uintptr_t get_physical_address(uint64_t entry)
     return entry & 0x000FFFFFFFFFF000;
 }
 
+
 /**
- * Converts a physical address to an entry in a page table.
+ * Converts a physical address to a page table entry.
  *
- * This function takes a physical address and returns a page table entry
- * that points to that address. The returned entry is suitable for use in
- * a page table.
+ * The function takes a physical address as an argument and returns a page table
+ * entry. The page table entry is a 64-bit value, where the lower 40 bits are the
+ * physical address and the upper 24 bits are flags.
  *
- * @param addr The physical address to convert.
+ * The flags set by the function are PAGE_PRESENT, and other flags can be added
+ * as needed (e.g. PAGE_RW).
  *
- * @return A page table entry that points to the given physical address.
+ * @param physical_address The physical address to convert.
+ * @return A page table entry that can be used to map the physical address.
  */
 static uint64_t convert_physical_address_to_page_table_entry(uintptr_t physical_address)
 {
-    return physical_address | 0x000FFFFFFFFFF000;
+    // Chỉ thêm các cờ điều khiển vào, không thay đổi các bit của địa chỉ vật lý
+    return physical_address | PAGE_PRESENT;  // thêm các cờ khác nếu cần, như PAGE_RW
 }
 
 // Hàm để chuyển đổi chỉ số sang địa chỉ bảng phân trang
@@ -88,8 +92,24 @@ void *create_user_page_table()
     return (void *)phys_pml4;
 }
 
-// map memory function
-// parameters: PML4, virtual address, physical address, number of bytes, flags
+/**
+ * Maps a range of physical memory to a range of virtual memory.
+ *
+ * The function takes a pointer to the PML4, a virtual address, a physical address,
+ * a size in bytes, and flags as parameters. It maps the given range of physical
+ * memory to the given range of virtual memory, and sets the given flags for the
+ * mapping.
+ *
+ * The function returns true if the mapping was successful, and false otherwise.
+ *
+ * @param pml4 A pointer to the PML4.
+ * @param virt_addr The virtual address of the mapping.
+ * @param phys_addr The physical address of the mapping.
+ * @param size The size of the mapping in bytes.
+ * @param flags The flags for the mapping.
+ *
+ * @return true if the mapping was successful, and false otherwise.
+ */
 bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t size, uint64_t flags)
 {
     // check if virtual address and physical address are aligned
@@ -118,8 +138,9 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
         uint64_t pd_index = virt_page >> 21 & 0x1FF;
         uint64_t pt_index = virt_page >> 12 & 0x1FF;
 
-        // check if pdpt entry is present
-        if (!(pml4[pml4_index] & PAGE_PRESENT))
+        uint64_t *pml4_virtual = PHYS_TO_VIRT((uintptr_t)pml4);
+
+        if (!(pml4_virtual[pml4_index] & PAGE_PRESENT))
         {
             // allocate pdpt entry
             uint64_t pdpt = allocate_physical_block();
@@ -131,11 +152,11 @@ bool map_memory(uint64_t *pml4, uint64_t virt_addr, uint64_t phys_addr, uint64_t
             // clear pdpt entry
             memset(PHYS_TO_VIRT(pdpt), 0, 4096);
             // set pdpt entry
-            pml4[pml4_index] = convert_physical_address_to_page_table_entry(pdpt) | PAGE_PRESENT;
+            pml4_virtual[pml4_index] = convert_physical_address_to_page_table_entry(pdpt) | PAGE_PRESENT;
         }
 
         // get pdpt virtual address
-        uint64_t *pdpt = PHYS_TO_VIRT(get_physical_address(pml4[pml4_index]));
+        uint64_t *pdpt = PHYS_TO_VIRT(get_physical_address(pml4_virtual[pml4_index]));
         // check if pd entry is present
         if (!(pdpt[pdpt_index] & PAGE_PRESENT))
         {

@@ -22,7 +22,7 @@ void memory_manager_init() {
     bitmap_allocator_init(&phys_allocator, bitmap_memory, BITMAP_MEMORY_SIZE);
 
     // Mark all blocks as allocated
-    for (uint64_t i = 0; i < phys_allocator.total_blocks; i++) {
+    for (uint64_t i = 0; i < phys_allocator.total_blocks / 8; i++) {
         phys_allocator.bitmap[i] = 0xFF;
     }
 
