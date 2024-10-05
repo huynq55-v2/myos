@@ -33,8 +33,7 @@ static inline uintptr_t read_cr3()
 // page_table is virtual address
 void switch_page_table(void *page_table)
 {
-    uintptr_t phys_pml4 = VIRT_TO_PHYS(page_table);
-    asm volatile("mov %0, %%cr3" : : "r"(phys_pml4));
+    asm volatile("mov %0, %%cr3" : : "r"(page_table));
 }
 
 /**

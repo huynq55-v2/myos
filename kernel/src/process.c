@@ -22,24 +22,31 @@ static process_t *process_list = NULL;
 static uint64_t current_pid = 1;
 
 // Hàm thêm tiến trình vào hàng đợi sẵn sàng
-void process_enqueue(process_t *proc) {
+void process_enqueue(process_t *proc)
+{
     proc->next = NULL;
-    if (ready_queue_tail) {
+    if (ready_queue_tail)
+    {
         ready_queue_tail->next = proc;
-    } else {
+    }
+    else
+    {
         ready_queue_head = proc;
     }
     ready_queue_tail = proc;
 }
 
 // Hàm lấy tiến trình tiếp theo từ hàng đợi sẵn sàng
-process_t* process_dequeue() {
-    if (!ready_queue_head) {
+process_t *process_dequeue()
+{
+    if (!ready_queue_head)
+    {
         return NULL;
     }
     process_t *proc = ready_queue_head;
     ready_queue_head = ready_queue_head->next;
-    if (!ready_queue_head) {
+    if (!ready_queue_head)
+    {
         ready_queue_tail = NULL;
     }
     proc->next = NULL;
@@ -47,21 +54,24 @@ process_t* process_dequeue() {
 }
 
 // Hàm khởi tạo hệ thống quản lý tiến trình
-void process_manager_init() {
+void process_manager_init()
+{
     // Có thể thêm các thiết lập ban đầu nếu cần
     kprintf("Process Manager Initialized\n");
 }
 
 // Hàm tạo một tiến trình mới từ ELF binary
-process_t* process_create(uint8_t *elf_start, uint8_t *elf_end) {
+process_t *process_create(uint8_t *elf_start, uint8_t *elf_end)
+{
     // Tải ELF vào bộ nhớ và tạo không gian địa chỉ riêng
-    process_t *proc = (process_t*)allocate_memory_bytes(sizeof(process_t));
-    if (!proc) {
+    process_t *proc = (process_t *)allocate_memory_bytes(sizeof(process_t));
+    if (!proc)
+    {
         kprintf("Process Manager: Failed to allocate memory for process\n");
         return NULL;
     }
     // convert proc to virtual address
-    proc = (process_t*)PHYS_TO_VIRT((uintptr_t)proc);
+    proc = (process_t *)PHYS_TO_VIRT((uintptr_t)proc);
 
     memset(proc, 0, sizeof(process_t));
 
@@ -70,23 +80,33 @@ process_t* process_create(uint8_t *elf_start, uint8_t *elf_end) {
 
     // Tạo page table mới cho tiến trình
     proc->page_table = (uint64_t)create_user_page_table();
-    if (!proc->page_table) {
+    if (!proc->page_table)
+    {
         kprintf("Process Manager: Failed to create page table\n");
         free_memory_bytes((uint64_t)proc, sizeof(process_t));
         return NULL;
     }
 
-    // Tải ELF vào không gian địa chỉ của tiến trình
-    if (!elf_load(proc->page_table, elf_start, elf_end)) {
+    uint64_t entry_point = elf_load(proc->page_table, elf_start, elf_end);
+    if (!entry_point) {
         kprintf("Process Manager: Failed to load ELF binary\n");
-        free_memory_bytes(proc->page_table, BLOCK_SIZE);
-        free_memory_bytes((uint64_t)proc, sizeof(process_t));
+        // ... cleanup ...
         return NULL;
     }
 
     // Thiết lập con trỏ lệnh và ngăn xếp
-    proc->context.rip = 0x400000; // Địa chỉ entry point đã được ELF loader thiết lập
-    proc->context.rsp = 0x7FFFFFFFF000;  // Ví dụ: địa chỉ ngăn xếp cao
+    proc->context.rip = entry_point; // Địa chỉ entry point đã được ELF loader thiết lập
+
+    // create user stack
+    uint64_t user_stack = allocate_physical_block();
+
+    // Bắt đầu ánh xạ từ (0x7FFFFFFFF000 - BLOCK_SIZE)
+    map_memory(proc->page_table,
+               0x7FFFFFFFF000 - BLOCK_SIZE, // Địa chỉ ảo bắt đầu ánh xạ
+               user_stack,                  // Địa chỉ vật lý của block stack
+               BLOCK_SIZE,                  // Kích thước của block
+               PAGING_PAGE_PRESENT | PAGING_PAGE_RW | PAGING_PAGE_USER);
+    proc->context.rsp = 0x7FFFFFFFEFF0;  // Địa chỉ RSP được căn chỉnh theo 16-byte
 
     // Thêm tiến trình vào danh sách và hàng đợi sẵn sàng
     proc->next = process_list;
@@ -98,9 +118,11 @@ process_t* process_create(uint8_t *elf_start, uint8_t *elf_end) {
 }
 
 // Hàm chạy tiến trình đầu tiên
-void process_run() {
+void process_run()
+{
     process_t *proc = process_dequeue();
-    if (!proc) {
+    if (!proc)
+    {
         kprintf("Process Manager: No process to run\n");
         return;
     }
@@ -109,7 +131,8 @@ void process_run() {
 }
 
 // Hàm chuyển đổi ngữ cảnh giữa hai tiến trình
-void context_switch(process_t *current, process_t *next) {
+void context_switch(process_t *current, process_t *next)
+{
     // Lưu trạng thái của tiến trình hiện tại
     save_context(current);
 
