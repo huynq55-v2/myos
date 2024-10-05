@@ -41,27 +41,17 @@ typedef struct {
 // Định nghĩa các loại segment
 #define PT_LOAD 1
 
-bool elf_load(uint64_t page_table_phys, uint8_t *elf_start, uint8_t *elf_end) {
+uint64_t elf_load(uint64_t page_table_phys, uint8_t *elf_start, uint8_t *elf_end) {
     Elf64_Ehdr *ehdr = (Elf64_Ehdr*)elf_start;
 
     // Kiểm tra magic number
     if (ehdr->e_ident[0] != 0x7F || ehdr->e_ident[1] != 'E' ||
         ehdr->e_ident[2] != 'L' || ehdr->e_ident[3] != 'F') {
         kprintf("ELF Loader: Invalid ELF magic\n");
-        return false;
+        return NULL;
     }
 
-    // // Kiểm tra phiên bản
-    // if (ehdr->e_ident[4] != 1) { // EV_CURRENT
-    //     kprintf("ELF Loader: Unsupported ELF version\n");
-    //     return false;
-    // }
-
-    // // Kiểm tra loại
-    // if (ehdr->e_type != 2) { // ET_EXEC
-    //     kprintf("ELF Loader: Unsupported ELF type\n");
-    //     return false;
-    // }
+    uint64_t entry_point = ehdr->e_entry;
 
     // Lấy program headers
     Elf64_Phdr *phdr = (Elf64_Phdr*)(elf_start + ehdr->e_phoff);
@@ -78,14 +68,14 @@ bool elf_load(uint64_t page_table_phys, uint8_t *elf_start, uint8_t *elf_end) {
             uint64_t phys_addr = allocate_memory_bytes(memsz);
             if (!phys_addr) {
                 kprintf("ELF Loader: Failed to allocate memory for segment\n");
-                return false;
+                return NULL;
             }
 
             // Ánh xạ trang vào không gian địa chỉ của tiến trình
             if (!map_memory(page_table_phys, vaddr, phys_addr, memsz, PAGING_PAGE_PRESENT | PAGING_PAGE_RW | PAGING_PAGE_USER)) {
                 kprintf("ELF Loader: Failed to map memory for segment\n");
                 free_memory_bytes(phys_addr, memsz);
-                return false;
+                return NULL;
             }
 
             // Sao chép dữ liệu từ ELF vào bộ nhớ
@@ -103,5 +93,5 @@ bool elf_load(uint64_t page_table_phys, uint8_t *elf_start, uint8_t *elf_end) {
         }
     }
 
-    return true;
+    return entry_point;
 }
