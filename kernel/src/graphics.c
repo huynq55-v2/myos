@@ -353,3 +353,37 @@ void kprintf(const char *format, ...) {
 
     va_end(args);
 }
+
+void put_char(char c) {
+    // Xử lý ký tự xuống dòng
+    if (c == '\n') {
+        g_ctx.cursor_x = 0;  // Đặt con trỏ ngang về đầu dòng
+        g_ctx.cursor_y += FONT_LINE_HEIGHT;  // Di chuyển con trỏ xuống dòng, sử dụng chiều cao dòng từ font
+        return;
+    }
+
+    // Đảm bảo ký tự nằm trong khoảng ký tự có thể in được (32-126)
+    if (c < 32 || c > 126) {
+        c = '?';  // Ký tự ngoài khoảng, dùng '?' làm mặc định
+    }
+
+    // Vẽ ký tự dựa trên glyph
+    draw_glyph(g_ctx.cursor_x, g_ctx.cursor_y, c);
+
+    // Lấy thông tin glyph để biết khoảng cách con trỏ cần di chuyển
+    const glyph_t *glyph = &roboto_glyphs[c - 32];  // Lấy glyph của ký tự
+    g_ctx.cursor_x += glyph->x_advance;  // Di chuyển con trỏ ngang dựa trên glyph
+
+    // Nếu con trỏ vượt quá chiều rộng màn hình, xuống dòng
+    if (g_ctx.cursor_x + glyph->width > g_ctx.width) {
+        g_ctx.cursor_x = 0;  // Đặt con trỏ ngang về đầu dòng
+        g_ctx.cursor_y += FONT_LINE_HEIGHT;  // Xuống dòng
+    }
+
+    // Kiểm tra nếu cần cuộn màn hình
+    if (g_ctx.cursor_y + FONT_LINE_HEIGHT > g_ctx.height) {
+        scroll_screen();  // Hàm này cần phải cuộn màn hình
+        g_ctx.cursor_y -= FONT_LINE_HEIGHT;  // Điều chỉnh lại con trỏ sau khi cuộn
+    }
+}
+

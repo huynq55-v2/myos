@@ -34,6 +34,7 @@
         "memory_manager.h": "c",
         "context_switch.h": "c",
         "compare": "cpp",
-        "config.h": "c"
+        "config.h": "c",
+        "syscall_user.h": "c"
     }
 }

@@ -2,6 +2,7 @@
 #include "idt.h"
 #include "klibc.h"
 #include "graphics.h"
+#include "syscall_handler.h"
 
 idt_entry_t idt[IDT_SIZE];
 
@@ -86,6 +87,8 @@ void *isr_table[] = {
     &isr31
 };
 
+extern void syscall_handler();
+
 void idt_init() {
     idtr.limit = (sizeof(idt_entry_t) * IDT_SIZE) - 1;
     idtr.base = (uint64_t)&idt;
@@ -99,6 +102,7 @@ void idt_init() {
     // Thiết lập IST cho double fault handler (vector 8)
     set_idt_gate(8, (uint64_t)isr_table[8], 0x08, 0x8E, 1);
 
+    set_idt_gate(SYSCALL_VECTOR, (uint64_t)syscall_handler, 0x08, 0xEE, 0);
 
     __asm__ __volatile__ ("lidt %0" : : "m"(idtr));
     __asm__ __volatile__ ("sti");

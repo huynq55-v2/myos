@@ -33,5 +33,6 @@ void draw_cursor();
 void erase_cursor();
 void print(const char *text);
 void kprintf(const char *format, ...);
+void put_char(char c);
 
 #endif // GRAPHICS_H

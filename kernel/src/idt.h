@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+typedef long ssize_t;
+
 // Cấu trúc của một mục IDT (Interrupt Gate)
 typedef struct {
     uint16_t offset_low;    // 16 bit thấp của địa chỉ hàm xử lý
@@ -25,6 +27,10 @@ typedef struct {
 void idt_init();
 void isr_handler_c(uint64_t vector_number, isr_stack_t *stack);
 void set_idt_gate(int vector, uint64_t handler, uint16_t selector, uint8_t type_attr, uint8_t ist);
+
+ssize_t syscall_handler_c(uint64_t syscall_number, uint64_t arg1, uint64_t arg2, uint64_t arg3);
+
+#define SYSCALL_VECTOR 0x80
 
 extern void *isr_table[];
 
