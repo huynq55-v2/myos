@@ -19,7 +19,7 @@ static process_t *ready_queue_tail = NULL;
 static process_t *process_list = NULL;
 
 // PID hiện tại
-static uint64_t current_pid = 1;
+uint64_t current_pid = 1;
 
 // Hàm thêm tiến trình vào hàng đợi sẵn sàng
 void process_enqueue(process_t *proc)

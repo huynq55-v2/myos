@@ -1,8 +1,9 @@
+// syscall_handler.asm
 .global syscall_handler
 syscall_handler:
-    cli                     // Tắt ngắt
+    cli                     // Disable interrupts
 
-    // Lưu các thanh ghi không phải volatile
+    // Save non-volatile registers
     pushq %rbx
     pushq %rcx
     pushq %rdx
@@ -18,27 +19,27 @@ syscall_handler:
     pushq %r14
     pushq %r15
 
-    // Lưu các tham số syscall vào các thanh ghi tạm thời
-    movq %rdi, %r10         // R10 = arg1 (fd)
-    movq %rsi, %r11         // R11 = arg2 (buf)
-    movq %rdx, %r12         // R12 = arg3 (count)
+    // Move syscall arguments to temporary registers
+    movq %rdi, %r10         // R10 = arg1
+    movq %rsi, %r11         // R11 = arg2
+    movq %rdx, %r12         // R12 = arg3
 
-    // Di chuyển số syscall và các tham số vào thanh ghi theo quy ước
-    movq %rax, %rdi          // RDI = số syscall (RAX)
-    movq %r10, %rsi          // RSI = arg1 (fd)
-    movq %r11, %rdx          // RDX = arg2 (buf)
-    movq %r12, %rcx          // RCX = arg3 (count)
+    // Prepare arguments for the C handler
+    movq %rax, %rdi         // RDI = syscall_number
+    movq %r10, %rsi         // RSI = arg1
+    movq %r11, %rdx         // RDX = arg2
+    movq %r12, %rcx         // RCX = arg3
 
-    // Căn chỉnh stack trước khi gọi hàm C
-    subq $8, %rsp             // Căn chỉnh stack
+    // Align the stack
+    subq $8, %rsp
 
-    // Gọi hàm xử lý syscall trong C
-    call syscall_handler_c    // Giá trị trả về được lưu trong RAX
+    // Call the C syscall handler
+    call syscall_handler_c   // Return value in RAX
 
-    // Khôi phục căn chỉnh stack
+    // Restore stack alignment
     addq $8, %rsp
 
-    // Khôi phục các thanh ghi không phải volatile
+    // Restore non-volatile registers
     popq %r15
     popq %r14
     popq %r13
@@ -54,5 +55,5 @@ syscall_handler:
     popq %rcx
     popq %rbx
 
-    sti                     // Bật ngắt
-    iretq                   // Trả về từ interrupt
+    sti                     // Enable interrupts
+    iretq                   // Return from interrupt

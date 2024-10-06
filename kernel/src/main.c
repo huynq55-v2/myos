@@ -80,6 +80,16 @@ void kmain(void)
     // Fetch the first framebuffer.
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
 
+    // Bật OSFXSR và OSXMMEXCPT bằng inline assembly
+    __asm__ __volatile__ (
+        "mov %%cr4, %%rax\n\t"
+        "or $0x600, %%rax\n\t"
+        "mov %%rax, %%cr4"
+        :
+        :
+        : "rax"
+    );
+
     // Khởi tạo graphics context
     init_graphics(fb);
     init_gdt();

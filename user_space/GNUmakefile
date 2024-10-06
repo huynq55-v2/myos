@@ -22,7 +22,7 @@ src/hello_user.elf: $(OBJ_FILES)
 # Quy tắc để compile từng file .c thành file .o
 $(OBJ_OUTPUT_DIR)/%.o: src/%.c
 	mkdir -p $(OBJ_OUTPUT_DIR)
-	$(KCC) $(KCFLAGS) $(KCPPFLAGS) -ffreestanding -c $< -o $@
+	$(KCC) $(KCFLAGS) $(KCPPFLAGS) -ffreestanding -c -g $< -o $@
 
 # Quy tắc clean để xóa các file .o và .elf
 clean:

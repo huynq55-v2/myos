@@ -31,7 +31,7 @@ $(call USER_VARIABLE,KCC,clang)
 $(call USER_VARIABLE,KLD,ld.lld)
 
 # User controllable C flags.
-$(call USER_VARIABLE,KCFLAGS,-g -O0 -pipe)
+$(call USER_VARIABLE,KCFLAGS,-g -O2 -pipe)
 
 # User controllable C preprocessor flags. We set none by default.
 $(call USER_VARIABLE,KCPPFLAGS,)
@@ -90,8 +90,6 @@ ifeq ($(KARCH),x86_64)
         -march=x86-64 \
         -mno-80387 \
         -mno-mmx \
-        -mno-sse \
-        -mno-sse2 \
         -mno-red-zone \
         -mcmodel=kernel
     override KLDFLAGS += \

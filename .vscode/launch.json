@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Attach to QEMU",
+            "name": "Attach to QEMU - Kernel and User Program",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/kernel/bin-x86_64/kernel",
+            "program": "${input:programPath}",  // Chọn kernel hoặc user program dựa trên input
             "miDebuggerPath": "/usr/bin/gdb",
             "miDebuggerServerAddress": "localhost:1234",
             "MIMode": "gdb",
@@ -18,17 +18,28 @@
                 },
                 {
                     "description": "Set breakpoint at entry point",
-                    "text": "break main",  // Thay "main" bằng tên hàm entry point của bạn
+                    "text": "break main",  // Thay "main" bằng tên hàm entry point của chương trình
                     "ignoreFailures": false
                 }
             ],
-            "targetArchitecture": "x86_64",,
+            "targetArchitecture": "x86_64",
             "externalConsole": false,
             "logging": {
                 "engineLogging": true,
                 "trace": true,
                 "traceResponse": true
             }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "programPath",
+            "type": "pickString",
+            "description": "Select program to debug",
+            "options": [
+                "${workspaceFolder}/kernel/bin-x86_64/kernel",
+                "${workspaceFolder}/user_space/src/hello_user.elf"
+            ]
         }
     ]
 }
