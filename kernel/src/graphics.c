@@ -358,7 +358,11 @@ void put_char(char c) {
     // Xử lý ký tự xuống dòng
     if (c == '\n') {
         g_ctx.cursor_x = 0;  // Đặt con trỏ ngang về đầu dòng
-        g_ctx.cursor_y += FONT_LINE_HEIGHT;  // Di chuyển con trỏ xuống dòng, sử dụng chiều cao dòng từ font
+        g_ctx.cursor_y += g_ctx.line_height;  // Di chuyển con trỏ xuống dòng, sử dụng chiều cao dòng từ font
+        if (g_ctx.cursor_y + g_ctx.line_height > g_ctx.height) {
+            scroll_screen();  // Hàm này cần phải cuộn màn hình
+            g_ctx.cursor_y -= g_ctx.line_height;  // Điều chỉnh lại con trỏ sau khi cuộn
+        }
         return;
     }
 
@@ -377,13 +381,10 @@ void put_char(char c) {
     // Nếu con trỏ vượt quá chiều rộng màn hình, xuống dòng
     if (g_ctx.cursor_x + glyph->width > g_ctx.width) {
         g_ctx.cursor_x = 0;  // Đặt con trỏ ngang về đầu dòng
-        g_ctx.cursor_y += FONT_LINE_HEIGHT;  // Xuống dòng
-    }
-
-    // Kiểm tra nếu cần cuộn màn hình
-    if (g_ctx.cursor_y + FONT_LINE_HEIGHT > g_ctx.height) {
-        scroll_screen();  // Hàm này cần phải cuộn màn hình
-        g_ctx.cursor_y -= FONT_LINE_HEIGHT;  // Điều chỉnh lại con trỏ sau khi cuộn
+        g_ctx.cursor_y += g_ctx.line_height;  // Xuống dòng
+        if (g_ctx.cursor_y + g_ctx.line_height > g_ctx.height) {
+            scroll_screen();  // Hàm này cần phải cuộn màn hình
+            g_ctx.cursor_y -= g_ctx.line_height;  // Điều chỉnh lại con trỏ sau khi cuộn
+        }
     }
 }
-

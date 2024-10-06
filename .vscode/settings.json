@@ -35,6 +35,7 @@
         "context_switch.h": "c",
         "compare": "cpp",
         "config.h": "c",
-        "syscall_user.h": "c"
+        "syscall_user.h": "c",
+        "algorithm": "c"
     }
 }
