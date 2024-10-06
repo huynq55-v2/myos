@@ -17,7 +17,7 @@ all: src/hello_user.elf
 
 # Quy tắc để build hello_user.elf từ tất cả các file .o
 src/hello_user.elf: $(OBJ_FILES)
-	$(KLD) -T $(LINKER_SCRIPT) -o $@ $(OBJ_FILES) -L/usr/local/elf/toolchain/x86_64-elf/lib/ -lc
+	$(KLD) -T $(LINKER_SCRIPT) -o $@ $(OBJ_FILES) -L/usr/local/elf/sysroot/x86_64-elf/lib/ -lc
 
 # Quy tắc để compile từng file .c thành file .o
 $(OBJ_OUTPUT_DIR)/%.o: src/%.c

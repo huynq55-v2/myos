@@ -70,7 +70,7 @@ void draw_text(int x, int y, const char *text) {
 
 void print_text(const char *text) {
     // Xóa dấu nháy con trỏ cũ
-    erase_cursor(g_ctx);
+    // erase_cursor(g_ctx);
 
     while (*text) {
         if (*text == '\n') {
@@ -108,7 +108,7 @@ void print_text(const char *text) {
     }
 
     // Vẽ dấu nháy con trỏ mới
-    draw_cursor();
+    // draw_cursor();
 }
 
 void scroll_screen() {
