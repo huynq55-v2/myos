@@ -5,11 +5,6 @@
 
 void main() {
     const char *msg = "Hello, World from User Space!\n";
-    while (1)
-    {
-        printf(msg);
-    }
-    
     printf(msg);
     while(1) {}
 }

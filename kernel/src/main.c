@@ -101,10 +101,6 @@ void kmain(void)
     run_all_tests();
     hcf();
 #else
-
-    // Khởi tạo quản lý tiến trình
-    process_manager_init();
-
     // Tạo tiến trình đầu tiên từ ELF binary
     process_t *proc = process_create(hello_user_elf_start, hello_user_elf_end);
     if (!proc) {

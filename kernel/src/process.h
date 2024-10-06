@@ -36,17 +36,11 @@ typedef struct process {
     struct process *next;              // Con trỏ đến tiến trình kế tiếp (dùng trong hàng đợi)
 } process_t;
 
-// Hàm khởi tạo hệ thống quản lý tiến trình
-void process_manager_init();
-
 // Hàm tạo một tiến trình mới từ ELF binary
 process_t* process_create(uint8_t *elf_start, uint8_t *elf_end);
 
 // Hàm chạy tiến trình đầu tiên
 void process_run();
-
-// Hàm chuyển đổi ngữ cảnh giữa hai tiến trình
-void context_switch(process_t *current, process_t *next);
 
 // Hàm thêm tiến trình vào hàng đợi sẵn sàng
 void process_enqueue(process_t *proc);
