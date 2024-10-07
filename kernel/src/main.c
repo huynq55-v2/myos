@@ -101,15 +101,20 @@ void kmain(void)
     run_all_tests();
     hcf();
 #else
-    // Tạo tiến trình đầu tiên từ ELF binary
-    process_t *proc = process_create(hello_user_elf_start, hello_user_elf_end, 0);
-    if (!proc) {
-        kprintf("kmain: Failed to create initial process\n");
-        hcf();
+    // Tạo tiến trình đầu tiên (ví dụ: init process)
+    process_t *init_proc = process_create(hello_user_elf_start, hello_user_elf_end, 0);
+    if (!init_proc) {
+        kprintf("Kernel: Failed to create init process\n");
+        while (1) {}
     }
 
-    // Chạy tiến trình đầu tiên
-    process_run();
+    // Thêm tiến trình đầu tiên vào hàng đợi sẵn sàng
+    process_enqueue(init_proc);
+
+    // Vòng lặp chính của scheduler
+    while (1) {
+        process_run();
+    }
 
     // We're done, just hang...
     hcf();

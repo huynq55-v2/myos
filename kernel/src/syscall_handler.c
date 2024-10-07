@@ -35,9 +35,7 @@ ssize_t syscall_write(int fd, const void *buf, size_t count) {
 
 // Implement the exit syscall
 void syscall_exit(int status) {
-    kprintf("Process exited with status %d\n", status);
-    // Implement process termination logic here
-    // process_exit(status);
+    process_exit(status);
 }
 
 extern uint64_t current_pid;

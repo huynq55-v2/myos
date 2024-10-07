@@ -138,16 +138,108 @@ void process_run()
     switch_to_user_space(proc->context.rip, proc->context.rsp, proc->page_table);
 }
 
+// ==============================================================================
 // Hàm xử lý kết thúc tiến trình
 void process_exit(int exit_code)
 {
     current_process->state = PROCESS_STATE_ZOMBIE;
     current_process->exit_code = exit_code;
-    // Thông báo cho tiến trình cha nếu cần
-    // Chuyển sang tiến trình khác
+
+    // Giải phóng tài nguyên của tiến trình
+    // memory_free_process_resources(current_process);
+
+    // Loại bỏ tiến trình khỏi danh sách tiến trình
+    remove_process(current_process);
+
+    // // Thông báo cho tiến trình cha nếu cần
+    // if (current_process->parent_pid != 0) {
+    //     process_t *parent = get_process_by_pid(current_process->parent_pid);
+    //     if (parent) {
+    //         // Cập nhật trạng thái cho tiến trình cha biết rằng tiến trình con đã kết thúc
+    //         // Ví dụ: parent->child_exit_status = exit_code;
+    //     }
+    // }
+
+    // In thông tin kết thúc tiến trình
+    kprintf("Process %llu has exited with status %d\n", current_process->pid, exit_code);
+
+    // Chuyển đổi sang tiến trình khác
     process_run();
+
+    // Không nên trở lại đây
+    while (1);
 }
 
+// Hàm loại bỏ tiến trình khỏi các danh sách quản lý
+void remove_process(process_t *proc) {
+    if (!proc) return;
+
+    // 1. Loại bỏ khỏi ready_queue nếu có
+    if (ready_queue_head == proc) {
+        ready_queue_head = proc->next;
+        if (ready_queue_tail == proc) {
+            ready_queue_tail = NULL;
+        }
+    } else {
+        process_t *prev = ready_queue_head;
+        while (prev && prev->next != proc) {
+            prev = prev->next;
+        }
+        if (prev && prev->next == proc) {
+            prev->next = proc->next;
+            if (ready_queue_tail == proc) {
+                ready_queue_tail = prev;
+            }
+        }
+    }
+
+    // 2. Loại bỏ khỏi danh sách con của tiến trình cha nếu có
+    if (proc->parent_pid != 0) {
+        process_t *parent = get_process_by_pid(proc->parent_pid);
+        if (parent) {
+            process_t *prev_child = NULL;
+            process_t *child = parent->children;
+            while (child && child != proc) {
+                prev_child = child;
+                child = child->sibling;
+            }
+            if (child) {
+                if (prev_child) {
+                    prev_child->sibling = child->sibling;
+                } else {
+                    parent->children = child->sibling;
+                }
+            }
+        }
+    }
+
+    // 3. Xóa tiến trình khỏi các danh sách khác nếu có (nếu hệ thống của bạn có các danh sách khác)
+    // Ví dụ: danh sách tất cả các tiến trình (all_process_list), nếu tồn tại
+    // Thêm code tương tự để loại bỏ khỏi các danh sách khác
+
+    // 4. Nếu tiến trình có tiến trình con, bạn có thể cần xử lý chúng (chuyển giao cho tiến trình init hoặc PID=1)
+    // Ví dụ:
+    if (proc->children) {
+        process_t *child = proc->children;
+        while (child) {
+            process_t *next_child = child->sibling;
+            child->parent_pid = 1; // Giả sử PID=1 là tiến trình init
+            // Thêm child vào danh sách con của tiến trình init
+            process_t *init_proc = get_process_by_pid(1);
+            if (init_proc) {
+                child->sibling = init_proc->children;
+                init_proc->children = child;
+            }
+            child = next_child;
+        }
+    }
+
+    // 5. Xóa liên kết con trỏ đến tiến trình hiện tại nếu cần
+    proc->next = NULL;
+    proc->sibling = NULL;
+    proc->children = NULL;
+}
+// ==============================================================================
 // ==============================================================================
 // Hàm sao chép bảng trang từ tiến trình cha sang tiến trình con
 uint64_t copy_page_table(uint64_t parent_pml4_phys) {
