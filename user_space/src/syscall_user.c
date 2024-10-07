@@ -39,7 +39,6 @@ off_t lseek(int fd, off_t offset, int whence) {
 
 void _exit(int status) {
     syscall(SYSCALL_EXIT, status, 0, 0);
-    while(1) {} // Should never return
 }
 
 pid_t kill(pid_t pid, int sig) {
