@@ -18,14 +18,24 @@ typedef enum {
 
 // Cấu trúc ngữ cảnh CPU
 typedef struct cpu_context {
+    uint64_t rax;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+    uint64_t rsi;
+    uint64_t rdi;
     uint64_t rsp;
     uint64_t rbp;
-    uint64_t rbx;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
     uint64_t r12;
     uint64_t r13;
     uint64_t r14;
     uint64_t r15;
     uint64_t rip;
+    uint64_t rflags;
 } cpu_context_t;
 
 // Cấu trúc cho một tiến trình
@@ -54,7 +64,7 @@ void process_enqueue(process_t *proc);
 process_t* process_dequeue();
 
 // // Hệ thống call fork
-// int sys_fork();
+int sys_fork();
 
 // // Hệ thống call execve
 // int sys_execve(const char *pathname, char *const argv[], char *const envp[]);
@@ -67,5 +77,12 @@ void process_exit(int exit_code);
 
 // Hàm tìm tiến trình theo PID
 process_t* get_process_by_pid(uint64_t pid);
+
+// Khai báo các hàm sao chép bảng trang
+uint64_t copy_page_table(uint64_t parent_pml4_phys_addr);
+bool copy_pdpt(uint64_t parent_pdpt_phys_addr, uint64_t child_pdpt_phys_addr);
+bool copy_pdt(uint64_t parent_pdt_phys_addr, uint64_t child_pdt_phys_addr);
+bool copy_pt(uint64_t parent_pt_phys_addr, uint64_t child_pt_phys_addr);
+void free_page_table(uint64_t pml4_phys_addr);
 
 #endif // PROCESS_H

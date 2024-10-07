@@ -126,7 +126,9 @@ ssize_t syscall_handler_c(uint64_t syscall_number, uint64_t arg1, uint64_t arg2,
         case SYSCALL_GETPID:
             ret = syscall_getpid();
             break;
-        // Add more syscalls here
+        case SYSCALL_FORK:
+            ret = sys_fork();
+    break;
         default:
             kprintf("Syscall Handler: Unknown syscall number %llu\n", syscall_number);
             break;

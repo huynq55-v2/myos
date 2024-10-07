@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include "config.h"
 
+typedef int pid_t;
+
 // Các hàng đợi và biến toàn cục
 static process_t *ready_queue_head = NULL;
 static process_t *ready_queue_tail = NULL;
@@ -146,78 +148,190 @@ void process_exit(int exit_code)
     process_run();
 }
 
-// // Implement sys_fork
-// int sys_fork()
-// {
-//     if (!current_process) {
-//         return -1; // Không có tiến trình hiện tại
-//     }
+// ==============================================================================
+// Hàm sao chép bảng trang từ tiến trình cha sang tiến trình con
+uint64_t copy_page_table(uint64_t parent_pml4_phys_addr) {
+    // Tạo một bảng PML4 mới cho tiến trình con
+    uint64_t child_pml4_phys_addr = allocate_physical_block();
+    if (!child_pml4_phys_addr) {
+        kprintf("copy_page_table: Không thể cấp phát PML4 cho tiến trình con\n");
+        return 0;
+    }
 
-//     // Tạo tiến trình con bằng cách gọi process_create với cùng ELF binary
-//     // Giả sử bạn có cách lấy ELF binary từ tiến trình cha
-//     uint8_t *elf_start = ...; // Cần implement
-//     uint8_t *elf_end = ...;   // Cần implement
+    // Chuyển địa chỉ vật lý sang địa chỉ ảo để thao tác
+    uint64_t *parent_pml4 = (uint64_t *)PHYS_TO_VIRT(parent_pml4_phys_addr);
+    uint64_t *child_pml4 = (uint64_t *)PHYS_TO_VIRT(child_pml4_phys_addr);
 
-//     process_t *child = process_create(elf_start, elf_end, current_process->pid);
-//     if (!child) {
-//         return -1;
-//     }
+    // Sao chép nội dung của PML4
+    memset(child_pml4, 0, BLOCK_SIZE);
 
-//     // Sao chép ngữ cảnh CPU
-//     child->context = current_process->context;
-//     child->context.rip = child->context.rip; // Có thể cần điều chỉnh
+    for (int i = 0; i < 512; i++) {
+        if (parent_pml4[i] & PAGING_PAGE_PRESENT) {
+            // Lấy địa chỉ của bảng PDPT
+            uint64_t parent_pdpt_phys_addr = parent_pml4[i] & ~0xFFF;
+            uint64_t child_pdpt_phys_addr = allocate_physical_block();
+            if (!child_pdpt_phys_addr) {
+                kprintf("copy_page_table: Không thể cấp phát PDPT\n");
+                // Cần giải phóng các tài nguyên đã cấp phát
+                free_page_table(child_pml4_phys_addr);
+                return 0;
+            }
 
-//     // Trả về PID của tiến trình con cho tiến trình cha
-//     return child->pid;
-// }
+            // Liên kết PDPT vào PML4 của tiến trình con
+            child_pml4[i] = child_pdpt_phys_addr | (parent_pml4[i] & 0xFFF);
 
-// // Implement sys_execve
-// int sys_execve(const char *pathname, char *const argv[], char *const envp[])
-// {
-//     // Tải ELF binary mới từ pathname
-//     uint8_t *elf_start, *elf_end;
-//     if (!load_elf_from_path(pathname, &elf_start, &elf_end)) {
-//         return -1; // Lỗi khi tải ELF
-//     }
+            // Sao chép PDPT
+            if (!copy_pdpt(parent_pdpt_phys_addr, child_pdpt_phys_addr)) {
+                // Giải phóng các tài nguyên đã cấp phát
+                free_page_table(child_pml4_phys_addr);
+                return 0;
+            }
+        }
+    }
 
-//     // Giải phóng không gian địa chỉ hiện tại
-//     // Giả sử bạn có hàm để giải phóng không gian
-//     free_address_space(current_process->page_table);
+    return child_pml4_phys_addr;
+}
 
-//     // Tạo lại page table mới
-//     current_process->page_table = (uint64_t)create_user_page_table();
-//     if (!current_process->page_table) {
-//         return -1;
-//     }
+// Hàm sao chép PDPT
+bool copy_pdpt(uint64_t parent_pdpt_phys_addr, uint64_t child_pdpt_phys_addr) {
+    uint64_t *parent_pdpt = (uint64_t *)PHYS_TO_VIRT(parent_pdpt_phys_addr);
+    uint64_t *child_pdpt = (uint64_t *)PHYS_TO_VIRT(child_pdpt_phys_addr);
 
-//     // Tải ELF mới
-//     uint64_t entry_point = elf_load(current_process->page_table, elf_start, elf_end);
-//     if (!entry_point) {
-//         return -1;
-//     }
+    memset(child_pdpt, 0, BLOCK_SIZE);
 
-//     // Map lại stack
-//     uint64_t user_stack_phys = allocate_physical_block();
-//     if (!user_stack_phys) {
-//         return -1;
-//     }
+    for (int i = 0; i < 512; i++) {
+        if (parent_pdpt[i] & PAGING_PAGE_PRESENT) {
+            uint64_t parent_pdt_phys_addr = parent_pdpt[i] & ~0xFFF;
+            uint64_t child_pdt_phys_addr = allocate_physical_block();
+            if (!child_pdt_phys_addr) {
+                kprintf("copy_pdpt: Không thể cấp phát PDT\n");
+                return false;
+            }
 
-//     uint64_t user_stack_virt = 0x7FFFFFFF0000;
-//     if (!map_memory(current_process->page_table, user_stack_virt - BLOCK_SIZE, user_stack_phys, BLOCK_SIZE, PAGING_PAGE_PRESENT | PAGING_PAGE_RW | PAGING_PAGE_USER)) {
-//         return -1;
-//     }
+            child_pdpt[i] = child_pdt_phys_addr | (parent_pdpt[i] & 0xFFF);
 
-//     current_process->context.rip = entry_point;
-//     current_process->context.rsp = user_stack_virt - 16; // 16-byte aligned
+            if (!copy_pdt(parent_pdt_phys_addr, child_pdt_phys_addr)) {
+                return false;
+            }
+        }
+    }
 
-//     // Có thể cần xử lý argv và envp
-//     // ...
+    return true;
+}
 
-//     // Chạy tiến trình mới
-//     switch_to_user_space(current_process->context.rip, current_process->context.rsp, current_process->page_table);
+// Hàm sao chép PDT
+bool copy_pdt(uint64_t parent_pdt_phys_addr, uint64_t child_pdt_phys_addr) {
+    uint64_t *parent_pdt = (uint64_t *)PHYS_TO_VIRT(parent_pdt_phys_addr);
+    uint64_t *child_pdt = (uint64_t *)PHYS_TO_VIRT(child_pdt_phys_addr);
 
-//     return 0;
-// }
+    memset(child_pdt, 0, BLOCK_SIZE);
+
+    for (int i = 0; i < 512; i++) {
+        if (parent_pdt[i] & PAGING_PAGE_PRESENT) {
+            uint64_t parent_pt_phys_addr = parent_pdt[i] & ~0xFFF;
+            uint64_t child_pt_phys_addr = allocate_physical_block();
+            if (!child_pt_phys_addr) {
+                kprintf("copy_pdt: Không thể cấp phát PT\n");
+                return false;
+            }
+
+            child_pdt[i] = child_pt_phys_addr | (parent_pdt[i] & 0xFFF);
+
+            if (!copy_pt(parent_pt_phys_addr, child_pt_phys_addr)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+// Hàm sao chép PT (Page Table)
+bool copy_pt(uint64_t parent_pt_phys_addr, uint64_t child_pt_phys_addr) {
+    uint64_t *parent_pt = (uint64_t *)PHYS_TO_VIRT(parent_pt_phys_addr);
+    uint64_t *child_pt = (uint64_t *)PHYS_TO_VIRT(child_pt_phys_addr);
+
+    memset(child_pt, 0, BLOCK_SIZE);
+
+    for (int i = 0; i < 512; i++) {
+        if (parent_pt[i] & PAGING_PAGE_PRESENT) {
+            uint64_t parent_page_phys_addr = parent_pt[i] & ~0xFFF;
+
+            // Cấp phát một trang vật lý mới cho tiến trình con
+            uint64_t child_page_phys_addr = allocate_physical_block();
+            if (!child_page_phys_addr) {
+                kprintf("copy_pt: Không thể cấp phát trang vật lý\n");
+                return false;
+            }
+
+            // Sao chép dữ liệu từ trang của tiến trình cha sang tiến trình con
+            memcpy(
+                (void *)PHYS_TO_VIRT(child_page_phys_addr),
+                (void *)PHYS_TO_VIRT(parent_page_phys_addr),
+                BLOCK_SIZE
+            );
+
+            // Cập nhật bảng trang của tiến trình con
+            child_pt[i] = child_page_phys_addr | (parent_pt[i] & 0xFFF);
+        }
+    }
+
+    return true;
+}
+
+// Hàm giải phóng bảng trang khi gặp lỗi
+void free_page_table(uint64_t pml4_phys_addr) {
+    // Triển khai hàm này để giải phóng các bảng trang đã cấp phát
+    // Khi gặp lỗi trong quá trình sao chép, cần giải phóng các tài nguyên để tránh rò rỉ bộ nhớ
+    // ...
+}
+
+// ================================================================================
+
+pid_t sys_fork()
+{
+    if (!current_process) {
+        return -1; // No current process
+    }
+
+    // Allocate memory for the child process
+    process_t *child = (process_t *)PHYS_TO_VIRT(allocate_memory_bytes(sizeof(process_t)));
+    if (!child) {
+        kprintf("sys_fork: Failed to allocate memory for child process\n");
+        return -1;
+    }
+
+    // Copy the current process structure to the child
+    memcpy(child, current_process, sizeof(process_t));
+
+    // Assign a new PID to the child
+    child->pid = current_pid++;
+    child->parent_pid = current_process->pid;
+
+    // Copy the parent's page table to the child
+    child->page_table = (uint64_t)copy_page_table(current_process->page_table);
+    if (!child->page_table) {
+        kprintf("sys_fork: Failed to copy page table\n");
+        free_memory_bytes(VIRT_TO_PHYS(child), sizeof(process_t));
+        return -1;
+    }
+
+    // Copy CPU context
+    child->context = current_process->context;
+
+    // Set the return value in the child's context to 0
+    child->context.rax = 0;
+
+    // Add the child to the ready queue
+    process_enqueue(child);
+
+    // Link the child to the parent's list of children
+    child->sibling = current_process->children;
+    current_process->children = child;
+
+    // Return the child's PID in the parent process
+    return child->pid;
+}
 
 // // Implement sys_waitpid
 // pid_t sys_waitpid(pid_t pid, int *status, int options)
