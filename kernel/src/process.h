@@ -7,6 +7,7 @@
 #include "memory_manager.h"
 #include "paging.h"
 
+// Định nghĩa PID
 typedef int pid_t;
 
 // Định nghĩa trạng thái của tiến trình
@@ -65,8 +66,8 @@ void process_enqueue(process_t *proc);
 // Hàm lấy tiến trình tiếp theo từ hàng đợi sẵn sàng
 process_t* process_dequeue();
 
-// // Hệ thống call fork
-int sys_fork();
+// Hệ thống call fork
+pid_t sys_fork();
 pid_t sys_waitpid(pid_t pid, int *status);
 
 // Hàm xử lý kết thúc tiến trình

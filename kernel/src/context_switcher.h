@@ -5,12 +5,12 @@
 #include "process.h"
 
 // Hàm lưu ngữ cảnh của tiến trình hiện tại
-void save_context(process_t *proc);
+void save_context(cpu_context_t *context);
 
 // Hàm tải ngữ cảnh của tiến trình tiếp theo
 void load_context(process_t *proc);
 
 // Hàm chuyển đổi sang user space
-void switch_to_user_space(uint64_t entry_point, uint64_t stack_pointer, uint64_t page_table_phys);
+void switch_to_user_space(cpu_context_t *new_context);
 
 #endif // CONTEXT_SWITCHER_H

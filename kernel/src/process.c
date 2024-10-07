@@ -124,20 +124,6 @@ process_t *process_create(uint8_t *elf_start, uint8_t *elf_end, uint64_t parent_
     return proc;
 }
 
-// Hàm chạy tiến trình đầu tiên
-void process_run()
-{
-    process_t *proc = process_dequeue();
-    if (!proc)
-    {
-        kprintf("Process Manager: No process to run\n");
-        return;
-    }
-    proc->state = PROCESS_STATE_RUNNING;
-    current_process = proc;
-    switch_to_user_space(proc->context.rip, proc->context.rsp, proc->page_table);
-}
-
 // ==============================================================================
 // Hàm xử lý kết thúc tiến trình
 void process_exit(int exit_code)
@@ -162,9 +148,6 @@ void process_exit(int exit_code)
 
     // In thông tin kết thúc tiến trình
     kprintf("Process %llu has exited with status %d\n", current_process->pid, exit_code);
-
-    // Chuyển đổi sang tiến trình khác
-    process_run();
 
     // Không nên trở lại đây
     while (1);

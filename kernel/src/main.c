@@ -57,9 +57,6 @@ static void hcf(void)
     }
 }
 
-extern uint8_t hello_user_elf_start[];
-extern uint8_t hello_user_elf_end[];
-
 // The following will be our kernel's entry point.
 // If renaming kmain() to something else, make sure to change the
 // linker script accordingly.
@@ -101,20 +98,12 @@ void kmain(void)
     run_all_tests();
     hcf();
 #else
-    // Tạo tiến trình đầu tiên (ví dụ: init process)
-    process_t *init_proc = process_create(hello_user_elf_start, hello_user_elf_end, 0);
-    if (!init_proc) {
-        kprintf("Kernel: Failed to create init process\n");
-        while (1) {}
-    }
 
-    // Thêm tiến trình đầu tiên vào hàng đợi sẵn sàng
-    process_enqueue(init_proc);
+    // Khởi tạo bộ lập lịch và các tiến trình
+    scheduler_init();
 
-    // Vòng lặp chính của scheduler
-    while (1) {
-        process_run();
-    }
+    // Bắt đầu bộ lập lịch để xử lý các tiến trình
+    scheduler_start();
 
     // We're done, just hang...
     hcf();
