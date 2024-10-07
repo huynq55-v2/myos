@@ -1,5 +1,5 @@
 /* user_link.ld */
-ENTRY(main)
+ENTRY(_start)
 
 SECTIONS {
     . = 0x400000;
