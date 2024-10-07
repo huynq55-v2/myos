@@ -6,16 +6,20 @@
 #include <sys/stat.h>  // For struct stat
 
 // Define the syscall numbers (must match those in syscall.h)
-#define SYSCALL_WRITE   1
-#define SYSCALL_READ    2
-#define SYSCALL_CLOSE   3
-#define SYSCALL_FSTAT   4
-#define SYSCALL_ISATTY  5
-#define SYSCALL_LSEEK   6
-#define SYSCALL_SBRK    7
-#define SYSCALL_EXIT    8
-#define SYSCALL_KILL    9
-#define SYSCALL_GETPID  10
+typedef enum {
+    SYSCALL_WRITE = 1,
+    SYSCALL_READ,
+    SYSCALL_CLOSE,
+    SYSCALL_FSTAT,
+    SYSCALL_ISATTY,
+    SYSCALL_LSEEK,
+    SYSCALL_SBRK,
+    SYSCALL_EXIT,
+    SYSCALL_KILL,
+    SYSCALL_GETPID,
+    SYSCALL_FORK,
+    // Add more syscalls here as needed
+} syscall_number_t;
 
 // Generic syscall function
 long syscall(long number, long arg1, long arg2, long arg3);
@@ -31,5 +35,6 @@ void _exit(int status);
 pid_t kill(pid_t pid, int sig);
 pid_t getpid(void);
 void *sbrk(intptr_t increment);
+pid_t fork(void);
 
 #endif // SYSCALL_USER_H

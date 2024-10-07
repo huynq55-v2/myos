@@ -54,3 +54,7 @@ void *sbrk(intptr_t increment) {
     // Giả sử không cần quản lý heap động, chỉ trả về lỗi
     return (void *)-1;
 }
+
+pid_t fork(void) {
+    return (pid_t)syscall(SYSCALL_FORK, 0, 0, 0);
+}

@@ -150,133 +150,136 @@ void process_exit(int exit_code)
 
 // ==============================================================================
 // Hàm sao chép bảng trang từ tiến trình cha sang tiến trình con
-uint64_t copy_page_table(uint64_t parent_pml4_phys_addr) {
-    // Tạo một bảng PML4 mới cho tiến trình con
-    uint64_t child_pml4_phys_addr = allocate_physical_block();
-    if (!child_pml4_phys_addr) {
-        kprintf("copy_page_table: Không thể cấp phát PML4 cho tiến trình con\n");
+uint64_t copy_page_table(uint64_t parent_pml4_phys) {
+    uint64_t child_pml4_phys = 0;
+    uint64_t child_pdpt_phys = 0;
+    uint64_t child_pd_phys = 0;
+    uint64_t child_pt_phys = 0;
+    uint64_t *parent_pml4_virt = NULL;
+    uint64_t *child_pml4_virt = NULL;
+
+    // Allocate a new PML4 for the child
+    child_pml4_phys = allocate_physical_block();
+    if (!child_pml4_phys) {
+        kprintf("copy_page_table: Failed to allocate PML4\n");
         return 0;
     }
 
-    // Chuyển địa chỉ vật lý sang địa chỉ ảo để thao tác
-    uint64_t *parent_pml4 = (uint64_t *)PHYS_TO_VIRT(parent_pml4_phys_addr);
-    uint64_t *child_pml4 = (uint64_t *)PHYS_TO_VIRT(child_pml4_phys_addr);
+    // Convert physical addresses to virtual addresses
+    parent_pml4_virt = PHYS_TO_VIRT(parent_pml4_phys);
+    child_pml4_virt = PHYS_TO_VIRT(child_pml4_phys);
 
-    // Sao chép nội dung của PML4
-    memset(child_pml4, 0, BLOCK_SIZE);
+    // Zero out the new PML4
+    memset(child_pml4_virt, 0, PAGE_SIZE);
 
-    for (int i = 0; i < 512; i++) {
-        if (parent_pml4[i] & PAGING_PAGE_PRESENT) {
-            // Lấy địa chỉ của bảng PDPT
-            uint64_t parent_pdpt_phys_addr = parent_pml4[i] & ~0xFFF;
-            uint64_t child_pdpt_phys_addr = allocate_physical_block();
-            if (!child_pdpt_phys_addr) {
-                kprintf("copy_page_table: Không thể cấp phát PDPT\n");
-                // Cần giải phóng các tài nguyên đã cấp phát
-                free_page_table(child_pml4_phys_addr);
-                return 0;
+    // Copy kernel space mappings from the parent to the child
+    for (int i = 256; i < 512; i++) {
+        child_pml4_virt[i] = parent_pml4_virt[i];
+    }
+
+    // Copy user space mappings from the parent to the child
+    for (int i = 0; i < 256; i++) {
+        if (parent_pml4_virt[i] & PAGING_PAGE_PRESENT) {
+            // Allocate a new PDPT for the child
+            child_pdpt_phys = allocate_physical_block();
+            if (!child_pdpt_phys) {
+                kprintf("copy_page_table: Failed to allocate PDPT\n");
+                goto cleanup_pml4;
             }
 
-            // Liên kết PDPT vào PML4 của tiến trình con
-            child_pml4[i] = child_pdpt_phys_addr | (parent_pml4[i] & 0xFFF);
+            uint64_t *parent_pdpt_virt = PHYS_TO_VIRT(parent_pml4_virt[i] & 0xFFFFFFFFFFFFF000);
+            uint64_t *child_pdpt_virt = PHYS_TO_VIRT(child_pdpt_phys);
+            memset(child_pdpt_virt, 0, PAGE_SIZE);
 
-            // Sao chép PDPT
-            if (!copy_pdpt(parent_pdpt_phys_addr, child_pdpt_phys_addr)) {
-                // Giải phóng các tài nguyên đã cấp phát
-                free_page_table(child_pml4_phys_addr);
-                return 0;
+            // Set the PDPT entry in the child's PML4
+            child_pml4_virt[i] = (child_pdpt_phys & 0xFFFFFFFFFFFFF000) | (parent_pml4_virt[i] & 0xFFF);
+
+            for (int j = 0; j < 512; j++) {
+                if (parent_pdpt_virt[j] & PAGING_PAGE_PRESENT) {
+                    // Allocate a new PD for the child
+                    child_pd_phys = allocate_physical_block();
+                    if (!child_pd_phys) {
+                        kprintf("copy_page_table: Failed to allocate PD\n");
+                        goto cleanup_pdpt;
+                    }
+
+                    uint64_t *parent_pd_virt = PHYS_TO_VIRT(parent_pdpt_virt[j] & 0xFFFFFFFFFFFFF000);
+                    uint64_t *child_pd_virt = PHYS_TO_VIRT(child_pd_phys);
+                    memset(child_pd_virt, 0, PAGE_SIZE);
+
+                    // Set the PD entry in the child's PDPT
+                    child_pdpt_virt[j] = (child_pd_phys & 0xFFFFFFFFFFFFF000) | (parent_pdpt_virt[j] & 0xFFF);
+
+                    for (int k = 0; k < 512; k++) {
+                        if (parent_pd_virt[k] & PAGING_PAGE_PRESENT) {
+                            // Allocate a new PT for the child
+                            child_pt_phys = allocate_physical_block();
+                            if (!child_pt_phys) {
+                                kprintf("copy_page_table: Failed to allocate PT\n");
+                                goto cleanup_pd;
+                            }
+
+                            uint64_t *parent_pt_virt = PHYS_TO_VIRT(parent_pd_virt[k] & 0xFFFFFFFFFFFFF000);
+                            uint64_t *child_pt_virt = PHYS_TO_VIRT(child_pt_phys);
+                            memset(child_pt_virt, 0, PAGE_SIZE);
+
+                            // Set the PT entry in the child's PD
+                            child_pd_virt[k] = (child_pt_phys & 0xFFFFFFFFFFFFF000) | (parent_pd_virt[k] & 0xFFF);
+
+                            for (int l = 0; l < 512; l++) {
+                                if (parent_pt_virt[l] & PAGING_PAGE_PRESENT) {
+                                    uint64_t parent_page_phys = parent_pt_virt[l] & 0xFFFFFFFFFFFFF000;
+
+                                    // Allocate a new physical page for the child
+                                    uint64_t child_page_phys = allocate_physical_block();
+                                    if (!child_page_phys) {
+                                        kprintf("copy_page_table: Failed to allocate page\n");
+                                        goto cleanup_pt;
+                                    }
+
+                                    // Copy the content from parent to child
+                                    memcpy(PHYS_TO_VIRT(child_page_phys), PHYS_TO_VIRT(parent_page_phys), PAGE_SIZE);
+
+                                    // Set the page entry in the child's PT
+                                    child_pt_virt[l] = (child_page_phys & 0xFFFFFFFFFFFFF000) | (parent_pt_virt[l] & 0xFFF);
+                                }
+                            }
+                            // Reset child_pt_phys after use
+                            child_pt_phys = 0;
+                            continue;
+                        }
+                    cleanup_pt:
+                        if (child_pt_phys) {
+                            free_physical_block(child_pt_phys);
+                            child_pt_phys = 0;
+                        }
+                    }
+                    // Reset child_pd_phys after use
+                    child_pd_phys = 0;
+                    continue;
+                }
+            cleanup_pd:
+                if (child_pd_phys) {
+                    free_physical_block(child_pd_phys);
+                    child_pd_phys = 0;
+                }
             }
+            // Reset child_pdpt_phys after use
+            child_pdpt_phys = 0;
+            continue;
+        }
+    cleanup_pdpt:
+        if (child_pdpt_phys) {
+            free_physical_block(child_pdpt_phys);
+            child_pdpt_phys = 0;
         }
     }
 
-    return child_pml4_phys_addr;
-}
+    return child_pml4_phys;
 
-// Hàm sao chép PDPT
-bool copy_pdpt(uint64_t parent_pdpt_phys_addr, uint64_t child_pdpt_phys_addr) {
-    uint64_t *parent_pdpt = (uint64_t *)PHYS_TO_VIRT(parent_pdpt_phys_addr);
-    uint64_t *child_pdpt = (uint64_t *)PHYS_TO_VIRT(child_pdpt_phys_addr);
-
-    memset(child_pdpt, 0, BLOCK_SIZE);
-
-    for (int i = 0; i < 512; i++) {
-        if (parent_pdpt[i] & PAGING_PAGE_PRESENT) {
-            uint64_t parent_pdt_phys_addr = parent_pdpt[i] & ~0xFFF;
-            uint64_t child_pdt_phys_addr = allocate_physical_block();
-            if (!child_pdt_phys_addr) {
-                kprintf("copy_pdpt: Không thể cấp phát PDT\n");
-                return false;
-            }
-
-            child_pdpt[i] = child_pdt_phys_addr | (parent_pdpt[i] & 0xFFF);
-
-            if (!copy_pdt(parent_pdt_phys_addr, child_pdt_phys_addr)) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-// Hàm sao chép PDT
-bool copy_pdt(uint64_t parent_pdt_phys_addr, uint64_t child_pdt_phys_addr) {
-    uint64_t *parent_pdt = (uint64_t *)PHYS_TO_VIRT(parent_pdt_phys_addr);
-    uint64_t *child_pdt = (uint64_t *)PHYS_TO_VIRT(child_pdt_phys_addr);
-
-    memset(child_pdt, 0, BLOCK_SIZE);
-
-    for (int i = 0; i < 512; i++) {
-        if (parent_pdt[i] & PAGING_PAGE_PRESENT) {
-            uint64_t parent_pt_phys_addr = parent_pdt[i] & ~0xFFF;
-            uint64_t child_pt_phys_addr = allocate_physical_block();
-            if (!child_pt_phys_addr) {
-                kprintf("copy_pdt: Không thể cấp phát PT\n");
-                return false;
-            }
-
-            child_pdt[i] = child_pt_phys_addr | (parent_pdt[i] & 0xFFF);
-
-            if (!copy_pt(parent_pt_phys_addr, child_pt_phys_addr)) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-// Hàm sao chép PT (Page Table)
-bool copy_pt(uint64_t parent_pt_phys_addr, uint64_t child_pt_phys_addr) {
-    uint64_t *parent_pt = (uint64_t *)PHYS_TO_VIRT(parent_pt_phys_addr);
-    uint64_t *child_pt = (uint64_t *)PHYS_TO_VIRT(child_pt_phys_addr);
-
-    memset(child_pt, 0, BLOCK_SIZE);
-
-    for (int i = 0; i < 512; i++) {
-        if (parent_pt[i] & PAGING_PAGE_PRESENT) {
-            uint64_t parent_page_phys_addr = parent_pt[i] & ~0xFFF;
-
-            // Cấp phát một trang vật lý mới cho tiến trình con
-            uint64_t child_page_phys_addr = allocate_physical_block();
-            if (!child_page_phys_addr) {
-                kprintf("copy_pt: Không thể cấp phát trang vật lý\n");
-                return false;
-            }
-
-            // Sao chép dữ liệu từ trang của tiến trình cha sang tiến trình con
-            memcpy(
-                (void *)PHYS_TO_VIRT(child_page_phys_addr),
-                (void *)PHYS_TO_VIRT(parent_page_phys_addr),
-                BLOCK_SIZE
-            );
-
-            // Cập nhật bảng trang của tiến trình con
-            child_pt[i] = child_page_phys_addr | (parent_pt[i] & 0xFFF);
-        }
-    }
-
-    return true;
+cleanup_pml4:
+    free_physical_block(child_pml4_phys);
+    return 0;
 }
 
 // Hàm giải phóng bảng trang khi gặp lỗi
