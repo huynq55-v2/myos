@@ -80,9 +80,6 @@ process_t* get_process_by_pid(uint64_t pid);
 
 // Khai báo các hàm sao chép bảng trang
 uint64_t copy_page_table(uint64_t parent_pml4_phys_addr);
-bool copy_pdpt(uint64_t parent_pdpt_phys_addr, uint64_t child_pdpt_phys_addr);
-bool copy_pdt(uint64_t parent_pdt_phys_addr, uint64_t child_pdt_phys_addr);
-bool copy_pt(uint64_t parent_pt_phys_addr, uint64_t child_pt_phys_addr);
 void free_page_table(uint64_t pml4_phys_addr);
 
 #endif // PROCESS_H
