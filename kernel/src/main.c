@@ -102,7 +102,7 @@ void kmain(void)
     hcf();
 #else
     // Tạo tiến trình đầu tiên từ ELF binary
-    process_t *proc = process_create(hello_user_elf_start, hello_user_elf_end);
+    process_t *proc = process_create(hello_user_elf_start, hello_user_elf_end, 0);
     if (!proc) {
         kprintf("kmain: Failed to create initial process\n");
         hcf();
