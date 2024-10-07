@@ -18,6 +18,7 @@ typedef enum {
     SYSCALL_KILL,
     SYSCALL_GETPID,
     SYSCALL_FORK,
+    SYSCALL_WAITPID,
     // Add more syscalls here as needed
 } syscall_number_t;
 
@@ -36,5 +37,6 @@ pid_t kill(pid_t pid, int sig);
 pid_t getpid(void);
 void *sbrk(intptr_t increment);
 pid_t fork(void);
+pid_t waitpid(pid_t pid, int *status, int options);
 
 #endif // SYSCALL_USER_H

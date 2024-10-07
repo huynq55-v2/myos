@@ -428,32 +428,27 @@ pid_t sys_fork()
     return child->pid;
 }
 
-// // Implement sys_waitpid
-// pid_t sys_waitpid(pid_t pid, int *status, int options)
-// {
-//     // Kiểm tra xem pid có phải là con của tiến trình hiện tại không
-//     process_t *child = get_process_by_pid(pid);
-//     if (!child || child->parent_pid != current_process->pid) {
-//         return -1;
-//     }
+// ================================================================================
+pid_t sys_waitpid(pid_t pid, int *status) {
+    process_t *child_process = get_process_by_pid(pid);
 
-//     // Nếu tiến trình con đã kết thúc
-//     if (child->state == PROCESS_STATE_ZOMBIE) {
-//         if (status) {
-//             *status = child->exit_code;
-//         }
-//         // Giải phóng tài nguyên của tiến trình con
-//         // ...
-//         return pid;
-//     }
+    if (!child_process || child_process->parent_pid != current_process->pid) {
+        return -1;  // Tiến trình con không tồn tại hoặc không phải con của tiến trình hiện tại
+    }
 
-//     // Nếu chưa kết thúc, tiến trình cha sẽ bị block
-//     current_process->state = PROCESS_STATE_BLOCKED;
-//     // Thêm cơ chế để tiến trình cha được đánh thức khi con kết thúc
-//     // ...
+    // Chờ đợi cho đến khi tiến trình con chuyển sang trạng thái ZOMBIE
+    while (child_process->state != PROCESS_STATE_ZOMBIE) {
+        // Có thể tạm dừng hoặc sử dụng cơ chế đồng bộ để chờ đợi
+    }
 
-//     // Chạy tiến trình khác
-//     process_run();
+    // Cập nhật trạng thái kết thúc của tiến trình con
+    if (status) {
+        *status = child_process->exit_code;
+    }
 
-//     return pid;
-// }
+    // Loại bỏ tiến trình con ra khỏi danh sách tiến trình và giải phóng tài nguyên
+    remove_process(child_process);
+
+    return pid;
+}
+// ================================================================================

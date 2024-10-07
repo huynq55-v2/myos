@@ -17,6 +17,7 @@ typedef enum {
     SYSCALL_KILL,
     SYSCALL_GETPID,
     SYSCALL_FORK,
+    SYSCALL_WAITPID,
     // Add more syscalls here as needed
 } syscall_number_t;
 

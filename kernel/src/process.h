@@ -7,6 +7,8 @@
 #include "memory_manager.h"
 #include "paging.h"
 
+typedef int pid_t;
+
 // Định nghĩa trạng thái của tiến trình
 typedef enum {
     PROCESS_STATE_RUNNING,
@@ -65,12 +67,7 @@ process_t* process_dequeue();
 
 // // Hệ thống call fork
 int sys_fork();
-
-// // Hệ thống call execve
-// int sys_execve(const char *pathname, char *const argv[], char *const envp[]);
-
-// // Hệ thống call waitpid
-// pid_t sys_waitpid(pid_t pid, int *status, int options);
+pid_t sys_waitpid(pid_t pid, int *status);
 
 // Hàm xử lý kết thúc tiến trình
 void process_exit(int exit_code);

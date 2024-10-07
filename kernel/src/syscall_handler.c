@@ -75,7 +75,6 @@ ssize_t syscall_kill(pid_t pid, int sig) {
     return -1;
 }
 
-
 /**
  * The syscall handler function. This function is called by the kernel whenever
  * a user process invokes a syscall. It takes the syscall number and up to 3
@@ -126,7 +125,10 @@ ssize_t syscall_handler_c(uint64_t syscall_number, uint64_t arg1, uint64_t arg2,
             break;
         case SYSCALL_FORK:
             ret = sys_fork();
-    break;
+            break;
+        case SYSCALL_WAITPID:
+            ret = sys_waitpid((pid_t)arg1, (int *)arg2);
+            break;
         default:
             kprintf("Syscall Handler: Unknown syscall number %llu\n", syscall_number);
             break;

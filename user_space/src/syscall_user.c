@@ -57,3 +57,7 @@ void *sbrk(intptr_t increment) {
 pid_t fork(void) {
     return (pid_t)syscall(SYSCALL_FORK, 0, 0, 0);
 }
+
+pid_t waitpid(pid_t pid, int *status, int options) {
+    return (pid_t)syscall(SYSCALL_WAITPID, (long)pid, (long)status, (long)options);
+}
