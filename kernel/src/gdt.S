@@ -33,9 +33,3 @@ reloadSegments:
     movw %ax, %gs
     movw %ax, %ss
     ret
-
-# Function to load TSS (loadTss)
-loadTss:
-    # AX contains the TSS selector
-    ltr %ax
-    ret

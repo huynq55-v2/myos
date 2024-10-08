@@ -7,9 +7,6 @@
 // Hàm lưu ngữ cảnh của tiến trình hiện tại
 void save_context(cpu_context_t *context);
 
-// Hàm tải ngữ cảnh của tiến trình tiếp theo
-void load_context(process_t *proc);
-
 // Hàm chuyển đổi sang user space
 void switch_to_user_space(cpu_context_t *new_context);
 

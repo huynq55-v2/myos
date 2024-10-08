@@ -19,6 +19,7 @@ int main() {
         waitpid(pid, &status, 0);  // Chờ tiến trình con kết thúc
         printf("Child process %d exited with status %d\n", pid, status);
     }
+    // printf("Hello from user space!\n");
 
     return 0;
 }

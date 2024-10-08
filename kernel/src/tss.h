@@ -27,4 +27,6 @@ extern TSS tss;
 
 void init_tss();
 
+void load_tss(uint16_t tss_selector);
+
 #endif // TSS_H

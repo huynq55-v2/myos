@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 
-extern uint8_t kernel_stack[4096];
-extern uint8_t ist1_stack[4096];
+extern uint8_t kernel_stack[16384];
+extern uint8_t ist1_stack[16384];
 extern uint64_t kernel_stack_top;
 extern uint64_t ist1_stack_top;
 

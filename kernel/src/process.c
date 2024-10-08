@@ -82,6 +82,9 @@ process_t *process_create(uint8_t *elf_start, uint8_t *elf_end, uint64_t parent_
         return NULL;
     }
 
+    // Thiết lập CR3 trong ngữ cảnh tiến trình
+    proc->context.cr3 = proc->page_table;
+
     uint64_t entry_point = elf_load(proc->page_table, elf_start, elf_end);
     if (!entry_point) {
         kprintf("Process Manager: Failed to load ELF binary\n");

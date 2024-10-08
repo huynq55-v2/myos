@@ -23,8 +23,6 @@ void init_tss() {
     tss.iomap_base = sizeof(TSS);
 }
 
-extern void loadTss();
-
 void load_tss(uint16_t tss_selector) {
     __asm__ volatile (
         "ltr %0"

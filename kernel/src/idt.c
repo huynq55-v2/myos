@@ -70,7 +70,6 @@ void register_interrupt_handler(uint8_t vector, void (*handler)(uint64_t, isr_st
         return;
     }
     interrupt_handlers[vector] = handler;
-    set_idt_gate(vector, (uint64_t)isr_table[vector], 0x08, 0x8E, 0);
 }
 
 idt_entry_t idt[IDT_SIZE]; // Định nghĩa mảng IDT
@@ -83,15 +82,15 @@ void idt_init() {
 
     memset(&idt, 0, sizeof(idt_entry_t) * IDT_SIZE);
 
-    // Thiết lập trình xử lý ngoại lệ (vector 0-31)
+    // Thiết lập trình xử lý ngoại lệ (vector 0-31) với IST=0
     for (int i = 0; i < 32; i++) {
         set_idt_gate(i, (uint64_t)isr_table[i], 0x08, 0x8E, 0);
-        register_interrupt_handler(i, isr_handler_c); // Handler chung cho ngoại lệ
+        interrupt_handlers[i] = NULL;
     }
 
     // Thiết lập IST cho double fault handler (vector 8)
     set_idt_gate(8, (uint64_t)isr_table[8], 0x08, 0x8E, 1);
-    register_interrupt_handler(8, isr_handler_c); // Handler chung cho double fault
+    // Không gọi lại register_interrupt_handler cho vector 8 nếu đã đăng ký trong vòng lặp
 
     // Thiết lập trình xử lý syscall (vector SYSCALL_VECTOR)
     set_idt_gate(SYSCALL_VECTOR, (uint64_t)syscall_handler, 0x08, 0xEE, 0);
@@ -108,19 +107,22 @@ void idt_init() {
 
 // Hàm xử lý ngắt trong C
 void isr_handler_c(uint64_t vector_number, isr_stack_t *stack) {
+    // In thông tin lỗi trước
+    kprintf("Interrupt: Vector %d\n", (int)vector_number);
+    kprintf("RIP: %lx, CS: %lx, RFLAGS: %lx\n", stack->rip, stack->cs, stack->rflags);
+
+    // Nếu có mã lỗi, in ra
+    if (vector_number == 8 || (vector_number >= 10 && vector_number <= 14) || vector_number == 17 || vector_number == 30) {
+        kprintf("Error Code: %lx\n", stack->error_code);
+    }
+
+    // Nếu có handler đặc biệt cho vector này, gọi nó
     if (interrupt_handlers[vector_number]) {
         interrupt_handlers[vector_number](vector_number, stack);
     } else {
-        // Nếu không có trình xử lý cụ thể, xử lý ngoại lệ chung
+        // Nếu không, thực hiện xử lý mặc định
         kprintf("Unhandled Interrupt: Vector %d\n", (int)vector_number);
-        kprintf("RIP: %lx, CS: %lx, RFLAGS: %lx\n", stack->rip, stack->cs, stack->rflags);
-
-        // Nếu có mã lỗi, in ra
-        if (vector_number == 8 || (vector_number >= 10 && vector_number <= 14) || vector_number == 17 || vector_number == 30) {
-            kprintf("Error Code: %lx\n", stack->error_code);
-        }
-
-        // Dừng hệ thống
+        // Thực hiện các hành động cần thiết (ví dụ: dừng hệ thống)
         while (1) { __asm__ __volatile__("hlt"); }
     }
 }
