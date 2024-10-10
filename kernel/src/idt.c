@@ -1,8 +1,9 @@
-// idt.c
 #include "idt.h"
 #include "klibc.h"
 #include "graphics.h"
 #include "syscall_handler.h"
+#include "scheduler.h"
+#include "apic.h"
 
 // Định nghĩa các trình xử lý ngoại lệ (vector 0-31)
 extern void isr0();
@@ -37,6 +38,7 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
+extern void isr32();
 
 // Trình xử lý syscall
 extern void syscall_handler();
@@ -49,7 +51,7 @@ void *isr_table[] = {
     &isr0, &isr1, &isr2, &isr3, &isr4, &isr5, &isr6, &isr7,
     &isr8, &isr9, &isr10, &isr11, &isr12, &isr13, &isr14, &isr15,
     &isr16, &isr17, &isr18, &isr19, &isr20, &isr21, &isr22, &isr23,
-    &isr24, &isr25, &isr26, &isr27, &isr28, &isr29, &isr30, &isr31
+    &isr24, &isr25, &isr26, &isr27, &isr28, &isr29, &isr30, &isr31, &isr32
 };
 
 // Hàm thiết lập một gate trong IDT
@@ -90,14 +92,17 @@ void idt_init() {
 
     // Thiết lập IST cho double fault handler (vector 8)
     set_idt_gate(8, (uint64_t)isr_table[8], 0x08, 0x8E, 1);
-    // Không gọi lại register_interrupt_handler cho vector 8 nếu đã đăng ký trong vòng lặp
+    // Đăng ký trình xử lý ngắt cho vector 8
+    extern void double_fault_handler_c(uint64_t, isr_stack_t *);
+    register_interrupt_handler(8, double_fault_handler_c);
 
     // Thiết lập trình xử lý syscall (vector SYSCALL_VECTOR)
     set_idt_gate(SYSCALL_VECTOR, (uint64_t)syscall_handler, 0x08, 0xEE, 0);
     register_interrupt_handler(SYSCALL_VECTOR, syscall_handler_c); // Handler syscall
 
     // Thiết lập trình xử lý ngắt timer (vector TIMER_INTERRUPT_VECTOR)
-    extern void timer_interrupt_handler_c(uint64_t, isr_stack_t *);
+    set_idt_gate(TIMER_INTERRUPT_VECTOR, (uint64_t)isr32, 0x08, 0x8E, 0);
+    // extern void timer_interrupt_handler_c(uint64_t, isr_stack_t *);
     register_interrupt_handler(TIMER_INTERRUPT_VECTOR, timer_interrupt_handler_c);
 
     // Load IDT
@@ -107,22 +112,27 @@ void idt_init() {
 
 // Hàm xử lý ngắt trong C
 void isr_handler_c(uint64_t vector_number, isr_stack_t *stack) {
-    // In thông tin lỗi trước
-    kprintf("Interrupt: Vector %d\n", (int)vector_number);
-    kprintf("RIP: %lx, CS: %lx, RFLAGS: %lx\n", stack->rip, stack->cs, stack->rflags);
-
-    // Nếu có mã lỗi, in ra
-    if (vector_number == 8 || (vector_number >= 10 && vector_number <= 14) || vector_number == 17 || vector_number == 30) {
-        kprintf("Error Code: %lx\n", stack->error_code);
+    // Kiểm tra xem ngắt có phải là ngắt timer hay không
+    if (vector_number != 32) {
+        // Nếu không phải ngắt timer, in thông tin ngắt
+        if (vector_number == 8 || (vector_number >= 10 && vector_number <= 14) || vector_number == 17 || vector_number == 30) {
+            kprintf("Interrupt: Vector %d, Error Code: %lx\n", (int)vector_number, stack->error_code);
+        } else {
+            kprintf("Interrupt: Vector %d\n", (int)vector_number);
+        }
+        kprintf("RIP: %lx, CS: %lx, RFLAGS: %lx\n", stack->rip, stack->cs, stack->rflags);
     }
 
     // Nếu có handler đặc biệt cho vector này, gọi nó
     if (interrupt_handlers[vector_number]) {
         interrupt_handlers[vector_number](vector_number, stack);
     } else {
-        // Nếu không, thực hiện xử lý mặc định
-        kprintf("Unhandled Interrupt: Vector %d\n", (int)vector_number);
-        // Thực hiện các hành động cần thiết (ví dụ: dừng hệ thống)
-        while (1) { __asm__ __volatile__("hlt"); }
+        // Nếu không phải ngắt timer, thực hiện xử lý mặc định
+        if (vector_number != 32) {
+            kprintf("Unhandled Interrupt: Vector %d\n", (int)vector_number);
+            // Thực hiện các hành động cần thiết (ví dụ: dừng hệ thống)
+            while (1) { __asm__ __volatile__("hlt"); }
+        }
+        // Nếu là ngắt timer và không có handler, bạn có thể bỏ qua hoặc thực hiện hành động khác nếu cần
     }
 }

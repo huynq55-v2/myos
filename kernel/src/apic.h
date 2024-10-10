@@ -3,38 +3,66 @@
 #define APIC_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
-// Các giá trị định nghĩa cho chế độ của APIC timer
-#define APIC_TIMER_MODE_ONE_SHOT   0x00000000
-#define APIC_TIMER_MODE_PERIODIC   0x00020000
-#define APIC_TIMER_MODE_TSC_DEADLINE 0x00040000
+// Định nghĩa offset cho High Half Direct Mapping (HHDM)
+#define HHDM_OFFSET 0xFFFF800000000000
 
-// Các giá trị định nghĩa cho bộ chia tần số của APIC timer
-#define APIC_TIMER_DIVIDE_1       0x0000000B
-#define APIC_TIMER_DIVIDE_2       0x00000000
-#define APIC_TIMER_DIVIDE_4       0x00000001
-#define APIC_TIMER_DIVIDE_8       0x00000002
-#define APIC_TIMER_DIVIDE_16      0x00000003
-#define APIC_TIMER_DIVIDE_32      0x00000008
-#define APIC_TIMER_DIVIDE_64      0x00000009
-#define APIC_TIMER_DIVIDE_128     0x0000000A
+// Macro để chuyển đổi từ địa chỉ vật lý sang địa chỉ ảo
+#define PHYS_TO_VIRT(x) ((void *)((uintptr_t)(x) + HHDM_OFFSET))
 
-// Hàm lấy tần số APIC timer (giả định bạn sẽ triển khai)
-uint32_t apic_get_timer_frequency();
+// Macro để chuyển đổi từ địa chỉ ảo sang địa chỉ vật lý
+#define VIRT_TO_PHYS(x) ((void *)((uintptr_t)(x) - HHDM_OFFSET))
 
-// Hàm để thiết lập chế độ của APIC timer
-void apic_set_timer_mode(uint32_t mode);
+// Địa chỉ cơ sở của Local APIC (vật lý)
+#define APIC_BASE_PHYS 0xFEE00000
 
-// Hàm để thiết lập giá trị chia của APIC timer
-void apic_set_timer_divide(uint32_t divide);
+// Các thanh ghi APIC (vật lý)
+#define APIC_REG_TIMER_DIV_PHYS       (APIC_BASE_PHYS + 0x3E0)
+#define APIC_REG_TIMER_INITCNT_PHYS   (APIC_BASE_PHYS + 0x380)
+#define APIC_REG_TIMER_CURRCNT_PHYS   (APIC_BASE_PHYS + 0x390)
+#define APIC_REG_LVT_TIMER_PHYS       (APIC_BASE_PHYS + 0x320)
+#define APIC_REG_SPURIOUS_PHYS        (APIC_BASE_PHYS + 0xF0)
+#define APIC_REG_EOI_PHYS             (APIC_BASE_PHYS + 0xB0)
 
-// Hàm thiết lập giá trị đếm ban đầu của APIC timer
-void apic_set_timer_initial_count(uint32_t count);
+// Các hằng số APIC
+#define APIC_SW_ENABLE           0x100
+#define APIC_DISABLE             0x10000
+#define APIC_LVT_TIMER_PERIODIC  0x20000
+#define APIC_LVT_INT_MASKED      0x00010000
 
-// Hàm bật APIC timer
-void apic_enable_timer();
+// Hằng số ngắt
+#define IRQ_TIMER                32
+#define IRQ_SPURIOUS             39
 
-// Hàm gửi EOI (End Of Interrupt) tới APIC
-void apic_send_eoi();
+// Các chế độ bộ hẹn giờ
+#define TIMER_MODE_ONESHOT       0
+#define TIMER_MODE_PERIODIC      1
+#define TIMER_MODE_TSC_DEADLINE  2
+
+#define APIC_DEFAULT_FREQUENCY 10000000
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Hàm để ghi vào một thanh ghi APIC (sử dụng địa chỉ ảo)
+static inline void apic_write(uint32_t address_phys, uint32_t value);
+
+// Hàm để đọc từ một thanh ghi APIC (sử dụng địa chỉ ảo)
+static inline uint32_t apic_read(uint32_t address_phys);
+
+// Hàm gửi tín hiệu EOI (End Of Interrupt)
+void apic_eoi();
+
+// ISR cho bộ hẹn giờ APIC
+void apic_timer_isr();
+
+// Hàm khởi tạo bộ hẹn giờ APIC
+void apic_timer_init(uint32_t ticks_per_second);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // APIC_H

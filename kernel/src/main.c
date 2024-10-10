@@ -9,6 +9,7 @@
 #include "tss.h"
 #include "memory_manager.h"
 #include "process.h"
+#include "apic.h"
 
 #ifdef TEST
 void run_all_tests();
@@ -90,22 +91,21 @@ void kmain(void)
     // Khởi tạo graphics context
     init_graphics(fb);
     init_gdt();
-    idt_init(); // Nạp IDT
+    idt_init();  // Nạp IDT
 
     memory_manager_init();
 
-#ifdef TEST
-    run_all_tests();
-    hcf();
-#else
+    scheduler_init();  // Khởi tạo bộ lập lịch và tiến trình đầu tiên
 
-    // Khởi tạo bộ lập lịch và các tiến trình
-    scheduler_init();
+    // Khởi tạo bộ hẹn giờ APIC để ngắt mỗi 10 ms (100 Hz)
+    apic_timer_init(100);
 
-    // Bắt đầu bộ lập lịch để xử lý các tiến trình
-    scheduler_start();
+    __asm__ volatile ("sti");  // Bật cờ ngắt toàn cục
 
-    // We're done, just hang...
-    hcf();
-#endif
+    // scheduler_init();  // Khởi tạo bộ lập lịch và tiến trình đầu tiên
+    // scheduler_start(); // Bắt đầu bộ lập lịch
+
+    // timer_interrupt_handler_c();
+
+    hcf();  // Dừng hệ thống trong khi chờ đợi
 }

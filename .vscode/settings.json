@@ -36,6 +36,8 @@
         "compare": "cpp",
         "config.h": "c",
         "syscall_user.h": "c",
-        "algorithm": "c"
+        "algorithm": "c",
+        "apic.h": "c",
+        "scheduler.h": "c"
     }
 }

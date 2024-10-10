@@ -5,19 +5,18 @@
 
 #include <stdint.h>
 
-// Standard GDT entry (8 bytes)
-// Updated GDT entry for 64-bit mode
+// Định nghĩa GDTEntry32
 typedef struct
 {
-    uint16_t limit_low;       // Bits 0-15 of the limit
-    uint16_t base_low;        // Bits 0-15 of the base
-    uint8_t base_middle;      // Bits 16-23 of the base
+    uint16_t limit_low;       // Bits 0-15 của limit
+    uint16_t base_low;        // Bits 0-15 của base
+    uint8_t base_middle;      // Bits 16-23 của base
     uint8_t access;           // Access flags
-    uint8_t granularity;      // Granularity and bits 16-19 of the limit
-    uint8_t base_high;        // Bits 24-31 of the base
+    uint8_t granularity;      // Granularity và bits 16-19 của limit
+    uint8_t base_high;        // Bits 24-31 của base
 } __attribute__((packed)) GDTEntry32;
 
-// For TSS and LDT descriptors, which are 16 bytes
+// Định nghĩa GDTEntry64 cho TSS và LDT
 typedef struct
 {
     uint16_t limit_low;
@@ -30,6 +29,14 @@ typedef struct
     uint32_t reserved;
 } __attribute__((packed)) GDTEntry64;
 
+// Định nghĩa cấu trúc GDT
+typedef struct
+{
+    GDTEntry32 entries32[5];
+    GDTEntry64 tss_entry;
+} __attribute__((packed)) GDT;
+
+// Định nghĩa GDTR
 typedef struct
 {
     uint16_t limit;
@@ -37,14 +44,14 @@ typedef struct
 } __attribute__((packed)) GDTR;
 
 // Khai báo các biến toàn cục
-extern uint8_t gdt[];      // Mảng GDT
+extern GDT gdt;            // Biến GDT
 extern GDTR gdt_ptr;       // GDTR
 
-extern void setGdt(uint16_t limit, uint64_t base);
-extern void reloadSegments(void);
-
+// Hàm khởi tạo GDT
 void init_gdt();
 
-extern uint8_t gdt_entries[];
+// Các hàm hỗ trợ
+extern void setGdt(uint16_t limit, uint64_t base);
+extern void reloadSegments(void);
 
 #endif // GDT_H

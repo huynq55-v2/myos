@@ -31,8 +31,7 @@
 .global isr29
 .global isr30
 .global isr31
-.global timer_interrupt_handler_asm
-.global syscall_handler_asm
+.global isr32
 
 // Macro để định nghĩa ISR không có mã lỗi
 .macro ISR_NO_ERROR_CODE isr_num, vector_num
@@ -177,3 +176,4 @@ ISR_NO_ERROR_CODE 28, 28   # Reserved
 ISR_NO_ERROR_CODE 29, 29   # Reserved
 ISR_WITH_ERROR_CODE 30, 30 # Security Exception
 ISR_NO_ERROR_CODE 31, 31   # Reserved
+ISR_NO_ERROR_CODE 32, 32   # APIC Timer Interrupt

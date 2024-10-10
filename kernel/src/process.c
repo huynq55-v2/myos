@@ -32,6 +32,7 @@ process_t* get_process_by_pid(uint64_t pid) {
 }
 
 void process_enqueue(process_t *proc) {
+    kprintf("Enqueueing process %d\n", proc->pid);
     if (!proc) return;
 
     proc->next = NULL;
@@ -44,6 +45,7 @@ void process_enqueue(process_t *proc) {
 }
 
 process_t *process_dequeue() {
+    kprintf("Dequeuing process %d\n", ready_queue_head->pid);
     if (!ready_queue_head) return NULL;
 
     process_t *proc = ready_queue_head;
@@ -122,7 +124,6 @@ process_t *process_create(uint8_t *elf_start, uint8_t *elf_end, uint64_t parent_
         }
     }
 
-    process_enqueue(proc);
     kprintf("Process Manager: Created process PID=%llu\n", proc->pid);
     return proc;
 }

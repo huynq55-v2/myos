@@ -52,6 +52,8 @@ void idt_init();
 // Hàm xử lý ngắt trong C
 void isr_handler_c(uint64_t vector_number, isr_stack_t *stack);
 
+void double_fault_handler_c(uint64_t vector_number, isr_stack_t *stack);
+
 // Hàm xử lý syscall trong C
 ssize_t syscall_handler_c(uint64_t syscall_number, uint64_t arg1, uint64_t arg2, uint64_t arg3);
 
