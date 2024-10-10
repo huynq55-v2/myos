@@ -1,95 +1,85 @@
-// context_switcher.S
-.global _save_context
-.global _switch_to_context
-.global switch_to_user_space
+# File: context_switch.S
 
-.section .text
-
-// Hàm lưu ngữ cảnh
+        .global _save_context
 _save_context:
-    // Argument: rdi = pointer to cpu_context_t
+        # Input: %rdi = pointer to cpu_context_t
 
-    // Lưu các thanh ghi đa dụng vào cấu trúc cpu_context_t
-    movq %rax, 0x00(%rdi)    // rax
-    movq %rbx, 0x08(%rdi)    // rbx
-    movq %rcx, 0x10(%rdi)    // rcx
-    movq %rdx, 0x18(%rdi)    // rdx
-    movq %rsi, 0x20(%rdi)    // rsi
-    movq %rsp, 0x30(%rdi)    // rsp
-    movq %rbp, 0x38(%rdi)    // rbp
-    movq %r8,  0x40(%rdi)    // r8
-    movq %r9,  0x48(%rdi)    // r9
-    movq %r10, 0x50(%rdi)    // r10
-    movq %r11, 0x58(%rdi)    // r11
-    movq %r12, 0x60(%rdi)    // r12
-    movq %r13, 0x68(%rdi)    // r13
-    movq %r14, 0x70(%rdi)    // r14
-    movq %r15, 0x78(%rdi)    // r15
+        # Lưu các thanh ghi tổng quát
+        movq %rax, 0x00(%rdi)
+        movq %rbx, 0x08(%rdi)
+        movq %rcx, 0x10(%rdi)
+        movq %rdx, 0x18(%rdi)
+        movq %rsi, 0x20(%rdi)
+        movq %rdi, 0x28(%rdi)    # Lưu %rdi (chứa con trỏ context)
+        movq %rsp, 0x30(%rdi)
+        movq %rbp, 0x38(%rdi)
+        movq %r8,  0x40(%rdi)
+        movq %r9,  0x48(%rdi)
+        movq %r10, 0x50(%rdi)
+        movq %r11, 0x58(%rdi)
+        movq %r12, 0x60(%rdi)
+        movq %r13, 0x68(%rdi)
+        movq %r14, 0x70(%rdi)
+        movq %r15, 0x78(%rdi)
 
-    // Lưu RFLAGS vào cpu_context_t
-    pushfq
-    popq %rax
-    movq %rax, 0x88(%rdi)    // rflags
-
-    // Lưu RIP vào cpu_context_t
-    lea 1f, %rax
-    movq %rax, 0x80(%rdi)    // rip
-
-    movq %rdi, 0x28(%rdi)    // rdi
-
-    ret
+        # Lưu RIP bằng cách sử dụng call và pop
+        call 1f                   # Đặt địa chỉ của nhãn 1 lên stack và gọi nó
 1:
+        popq %rax                # Lấy địa chỉ trả về từ stack vào %rax
+        movq %rax, 0x80(%rdi)    # Lưu RIP vào context
 
-// Hàm chuyển đổi ngữ cảnh
+        # Lưu RFLAGS
+        pushfq
+        popq %rax
+        movq %rax, 0x88(%rdi)
+
+        # Lưu CR3
+        movq %cr3, %rax
+        movq %rax, 0x90(%rdi)
+
+        ret
+
+        .global _switch_to_context
 _switch_to_context:
-    // Argument: rdi = pointer to cpu_context_t
+        # Input: %rdi = pointer to cpu_context_t
 
-    // Tải CR3 từ cpu_context_t và cập nhật CR3
-    movq 0x90(%rdi), %rax    // cr3 tại offset 0x90
-    movq %rax, %cr3
+        # Lưu con trỏ context vào %r11
+        movq %rdi, %r11
 
-    // Tải các thanh ghi đa dụng từ cpu_context_t (except rdi and rsp)
-    movq 0x00(%rdi), %rax    // rax
-    movq 0x08(%rdi), %rbx    // rbx
-    movq 0x10(%rdi), %rcx    // rcx
-    movq 0x18(%rdi), %rdx    // rdx
-    movq 0x20(%rdi), %rsi    // rsi
-    // Do not restore %rdi yet
-    // Do not restore %rsp yet
-    movq 0x38(%rdi), %rbp    // rbp
-    movq 0x40(%rdi), %r8     // r8
-    movq 0x48(%rdi), %r9     // r9
-    movq 0x50(%rdi), %r10    // r10
-    movq 0x58(%rdi), %r11    // r11
-    movq 0x60(%rdi), %r12    // r12
-    movq 0x68(%rdi), %r13    // r13
-    movq 0x70(%rdi), %r14    // r14
-    movq 0x78(%rdi), %r15    // r15
+        # Phục hồi các thanh ghi tổng quát
+        movq 0x00(%r11), %rax
+        movq 0x08(%r11), %rbx
+        movq 0x10(%r11), %rcx
+        movq 0x18(%r11), %rdx
+        movq 0x20(%r11), %rsi
+        movq 0x28(%r11), %rdi
+        movq 0x38(%r11), %rbp
+        movq 0x40(%r11), %r8
+        movq 0x48(%r11), %r9
+        movq 0x50(%r11), %r10
+        movq 0x60(%r11), %r12
+        movq 0x68(%r11), %r13
+        movq 0x70(%r11), %r14
+        movq 0x78(%r11), %r15
 
-    // Thiết lập stack frame cho iretq
-    // Push SS
-    pushq $0x23              // Segment selector cho user data segment (thường là 0x23)
-    // Push RSP (user mode stack pointer)
-    movq 0x30(%rdi), %rax    // Lấy giá trị %rsp từ cpu_context_t
-    pushq %rax
-    // Push RFLAGS
-    movq 0x88(%rdi), %rax    // rflags tại offset 0x88
-    pushq %rax
-    // Push CS
-    pushq $0x1B              // Segment selector cho user code segment (thường là 0x1B)
-    // Push RIP
-    movq 0x80(%rdi), %rax    // rip tại offset 0x80
-    pushq %rax               // Đẩy rip lên stack
+        # Phục hồi RFLAGS
+        movq 0x88(%r11), %r12    # Sử dụng %r12 tạm thời
+        pushq %r12
+        popfq
 
-    // Bây giờ khôi phục %rdi
-    movq 0x28(%rdi), %rdi    // rdi
+        # Phục hồi CR3
+        movq 0x90(%r11), %r12
+        movq %r12, %cr3
 
-    // Không cần khôi phục %rsp vì iretq sẽ xử lý
+        # Phục hồi RSP trước khi phục hồi %r11
+        movq 0x30(%r11), %rsp
 
-    // Thực hiện chuyển đổi ngữ cảnh bằng iretq
-    iretq
+        # Phục hồi %r11 sau khi hoàn tất việc sử dụng nó
+        # Không ghi đè %r11 trước khi hoàn tất việc truy cập bộ nhớ
+        # Đã phục hồi %r11 ở trên, nên không cần ghi đè thêm lần nữa
 
-// Hàm chuyển đổi sang user space
-switch_to_user_space:
-    // Argument: rdi = pointer to new cpu_context_t
-    call _switch_to_context
+        # Lấy RIP vào %r12
+        movq 0x80(%r11), %r12
+
+        # Nhảy đến RIP
+        jmp *%r12

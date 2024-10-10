@@ -12,3 +12,7 @@ extern void _switch_to_context(cpu_context_t *new_context);
 void save_context(cpu_context_t *context) {
     _save_context(context);
 }
+
+void switch_to_user_space(cpu_context_t *context) {
+    _switch_to_context(context);
+}
